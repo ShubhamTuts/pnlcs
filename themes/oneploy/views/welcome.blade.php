@@ -230,7 +230,7 @@
                 </details>
                 <details>
                     <summary>What does one-click deploy use?</summary>
-                    <p>Coolify — the same panel as https://github.com/ShubhamTuts/coolify. PNLCS bills; Coolify builds.</p>
+                    <p>Coolify — the same panel as https://github.com/ShubhamTuts/coolify. Oneploy bills; Coolify builds.</p>
                 </details>
                 <details>
                     <summary>What can the AI Agent do?</summary>
@@ -257,7 +257,7 @@
             <div class="op-footer__grid">
                 <div>
                     <a class="op-logo" href="{{ oneploy_url('marketing', '/') }}" style="color:#fff">{{ $brand }}<span>.dev</span></a>
-                    <p>Oneploy.dev is the customer-facing host. PNLCS bills it. Coolify deploys it. The Agent runs it.</p>
+                    <p>Oneploy.dev is the customer-facing host. Coolify deploys it. The Agent runs it.</p>
                 </div>
                 <div>
                     <h4>Hosting</h4>

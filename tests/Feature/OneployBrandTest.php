@@ -3,6 +3,15 @@
 use App\Models\Setting;
 use App\Services\ThemeManager;
 
+afterEach(function () {
+    // artisan() writes settings outside the test transaction, so restore
+    // the default theme or later GET / tests would keep the Oneploy welcome.
+    if (Setting::get('active_theme_slug') === 'oneploy') {
+        Setting::set('active_theme_slug', 'panelica', 'appearance');
+        app(ThemeManager::class)->applyViewLocations();
+    }
+});
+
 it('applies the Oneploy white-label name and theme', function () {
     $this->artisan('oneploy:brand')
         ->assertSuccessful();

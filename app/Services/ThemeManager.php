@@ -98,10 +98,7 @@ class ThemeManager
 
         Setting::set('active_theme_slug', $slug, 'appearance');
 
-        $viewPath = $this->themesPath.'/'.$slug.'/views';
-        if (is_dir($viewPath)) {
-            app('view')->prependLocation($viewPath);
-        }
+        $this->applyViewLocations();
 
         // Also apply theme colors as the active color preset
         $json = json_decode(file_get_contents($path.'/theme.json'), true);
@@ -222,6 +219,41 @@ class ThemeManager
         File::deleteDirectory($path);
 
         return ['success' => true];
+    }
+
+    /**
+     * Point the view finder at the active theme without leaking a previous
+     * theme's views into later requests (or later tests).
+     */
+    public function applyViewLocations(): void
+    {
+        if (! app()->bound('view')) {
+            return;
+        }
+
+        $finder = app('view')->getFinder();
+        if (! method_exists($finder, 'getPaths') || ! method_exists($finder, 'setPaths')) {
+            $viewPath = $this->getViewPath();
+            if ($viewPath) {
+                app('view')->prependLocation($viewPath);
+            }
+
+            return;
+        }
+
+        $root = $this->themesPath;
+        $paths = array_values(array_filter(
+            $finder->getPaths(),
+            fn (string $path) => ! str_starts_with($path, $root)
+        ));
+
+        $viewPath = $this->getViewPath();
+        if ($viewPath) {
+            array_unshift($paths, $viewPath);
+        }
+
+        $finder->setPaths($paths);
+        $finder->flush();
     }
 
     /**

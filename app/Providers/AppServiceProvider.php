@@ -90,13 +90,9 @@ class AppServiceProvider extends ServiceProvider
         $registry->registerRegistrar("manual", \Modules\Registrars\Manual\ManualRegistrar::class);
         $registry->registerRegistrar("enom",   \Modules\Registrars\Enom\EnomRegistrar::class);
 
-        // Theme Engine: prepend active theme's view directory
+        // Theme Engine: keep the active theme's views first for this request
         try {
-            $themeManager = $this->app->make(ThemeManager::class);
-            $viewPath = $themeManager->getViewPath();
-            if ($viewPath) {
-                $this->app['view']->prependLocation($viewPath);
-            }
+            $this->app->make(ThemeManager::class)->applyViewLocations();
         } catch (\Throwable $e) {
             // Silently fail during install/migrate when DB is not ready
         }
