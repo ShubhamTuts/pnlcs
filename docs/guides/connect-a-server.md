@@ -8,7 +8,7 @@ automatically when orders are paid and cancelled. Configure servers under
 
 1. **Configuration → Servers → Add Server**
 2. Choose the **type** (the module): Panelica, cPanel, Plesk, DirectAdmin,
-   HestiaCP, Proxmox, Vultr, or Custom.
+   HestiaCP, Proxmox, Vultr, **Coolify**, or Custom.
 3. Enter the connection details (below), then **Test Connection** on the edit page.
 4. Save.
 
@@ -40,6 +40,12 @@ automatically when orders are paid and cancelled. Configure servers under
 
 === "Vultr"
     - A **Vultr API key** (no hostname needed — it's a cloud API)
+
+=== "Coolify"
+    - **Hostname** and port `8000` (or `443` behind TLS)
+    - A **Coolify API token** as the Access Hash
+    - Optional destination **server UUID** as Username
+    - Step-by-step: [Connect Coolify](coolify.md)
 
 !!! tip "Always test the connection"
     Use the **Test Connection** button before assigning products. Most

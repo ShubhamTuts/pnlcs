@@ -68,6 +68,7 @@
 @php
     $st = strtolower((string) $service->status);
     $isPanelica = (($service->server?->type ?? $service->product?->server_type ?? '') === 'panelica');
+    $isCoolify = (($service->server?->type ?? $service->product?->server_type ?? '') === 'coolify');
     $feat = $hostingFeatures ?? [];
     // Full control-panel tool set. `route` null = not built yet (shown as Soon).
     $tools = [
@@ -83,6 +84,7 @@
         ['k'=>'laravel','name'=>__('client.hosting.laravel.title'),'desc'=>__('client.hosting.laravel.subtitle'),'ic'=>'ri-fire-line','c'=>'#ef4444','route'=>route('client.services.laravel',$service)],
         ['k'=>'nodejs','name'=>__('client.hosting.nodejs.title'),'desc'=>__('client.hosting.nodejs.subtitle'),'ic'=>'ri-nodejs-line','c'=>'#22c55e','route'=>route('client.services.nodejs',$service)],
         ['k'=>'python','name'=>__('client.hosting.python.title'),'desc'=>__('client.hosting.python.subtitle'),'ic'=>'ri-terminal-box-line','c'=>'#3b82f6','route'=>route('client.services.python',$service)],
+        ['k'=>'coolify','name'=>'Git & deploy','desc'=>'WordPress, Node.js, redeploys','ic'=>'ri-git-branch-line','c'=>'#0f766e','route'=>route('client.services.coolify',$service)],
     ];
 @endphp
 
@@ -104,6 +106,7 @@
     @if($st === 'active')
     <div class="sv-hact">
         @if($isPanelica)<a href="{{ route('client.services.login', $service) }}" class="sv-b sv-b-solid"><i class="ri-external-link-line"></i>{{ __('client.services.login_to_panel') }}</a>@endif
+        @if($isCoolify)<a href="{{ route('client.services.coolify', $service) }}" class="sv-b sv-b-solid"><i class="ri-rocket-line"></i>Git &amp; deploy</a>@endif
         <a href="{{ route('client.services.upgrade', $service) }}" class="sv-b sv-b-glass"><i class="ri-arrow-up-down-line"></i>{{ __('client.services.upgrade_downgrade') }}</a>
         <a href="{{ route('client.services.cancel', $service) }}" class="sv-b sv-b-glass"><i class="ri-close-circle-line"></i>{{ __('client.services.request_cancellation') }}</a>
     </div>

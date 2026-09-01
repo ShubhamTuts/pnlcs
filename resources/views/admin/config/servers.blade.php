@@ -76,6 +76,10 @@
                             <option value="cpanel">cPanel/WHM</option>
                             <option value="plesk">Plesk</option>
                             <option value="directadmin">DirectAdmin</option>
+                            <option value="coolify">Coolify (Webkahost PaaS)</option>
+                            <option value="hestiacp">HestiaCP</option>
+                            <option value="proxmox">Proxmox</option>
+                            <option value="vultr">Vultr</option>
                             <option value="cyberpanel">CyberPanel</option>
                             <option value="custom">Custom / Other</option>
                         </select>
@@ -128,6 +132,10 @@
                             <option value="cpanel">cPanel/WHM</option>
                             <option value="plesk">Plesk</option>
                             <option value="directadmin">DirectAdmin</option>
+                            <option value="coolify">Coolify (Webkahost PaaS)</option>
+                            <option value="hestiacp">HestiaCP</option>
+                            <option value="proxmox">Proxmox</option>
+                            <option value="vultr">Vultr</option>
                             <option value="cyberpanel">CyberPanel</option>
                             <option value="custom">Custom / Other</option>
                         </select>
@@ -194,6 +202,15 @@ const SERVER_TYPE_TUNING = {
         hint: '<strong>DirectAdmin:</strong> username is the admin account with its password or a login key, on port 2222.',
     },
     cyberpanel: { port: 8090, username: true, passwordLabel: 'Password', passwordPlaceholder: '', hashLabel: 'Access Hash', hashPlaceholder: '', hint: '' },
+    coolify: {
+        port: 8000, username: true,
+        passwordLabel: 'Password (unused)', passwordPlaceholder: 'Leave blank',
+        hashLabel: 'Coolify API Token', hashPlaceholder: 'Keys → API tokens in Coolify',
+        hint: '<strong>Coolify:</strong> hostname is your Coolify dashboard. Create a token under <em>Keys → API tokens</em> and paste it as the <strong>API Token</strong>. Optional: put a destination <strong>server UUID</strong> in Username; otherwise the first Coolify server is used. Port 8000 (or 443 behind TLS).',
+    },
+    hestiacp: { port: 8083, username: true, passwordLabel: 'Password / API Key', passwordPlaceholder: '', hashLabel: 'Access Hash', hashPlaceholder: '', hint: '<strong>HestiaCP:</strong> admin username and password or API key, port 8083.' },
+    proxmox: { port: 8006, username: true, passwordLabel: 'Password', passwordPlaceholder: '', hashLabel: 'API Token', hashPlaceholder: 'PVEAPIToken=user@realm!id=uuid', hint: '<strong>Proxmox:</strong> API token in Access Hash, port 8006.' },
+    vultr: { port: 443, username: false, passwordLabel: 'Password (unused)', passwordPlaceholder: '', hashLabel: 'Vultr API Key', hashPlaceholder: 'Vultr API key', hint: '<strong>Vultr:</strong> paste a Vultr API key as the Access Hash. Hostname can be api.vultr.com.' },
     custom: { port: 8443, username: true, passwordLabel: 'Password / API Token', passwordPlaceholder: '', hashLabel: 'Access Hash / API Key', hashPlaceholder: '', hint: '' },
 };
 

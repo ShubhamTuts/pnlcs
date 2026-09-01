@@ -94,6 +94,26 @@
     </div>
 
     @php $cfg = is_string($product->config_options) ? (json_decode($product->config_options, true) ?: []) : ($product->config_options ?? []); @endphp
+    <div class="card" style="margin-bottom:15px;" id="coolify-product-config">
+        <div class="card-header"><strong>Coolify / Webkahost PaaS</strong> <span style="font-size:11px;color:#888;">&mdash; Git source for Node.js, Next.js and static deploys</span></div>
+        <div class="card-body">
+            <p style="font-size:12px;color:#666;margin:0 0 12px;">The <em>Package</em> field above picks WordPress, Node.js, Next.js, static or any Git repo. For Git kinds, Coolify clones this public HTTPS repository on every deploy.</p>
+            <div style="display:grid;grid-template-columns:1fr 160px 120px;gap:12px;">
+                <div class="form-group">
+                    <label class="form-label">Git repository (HTTPS)</label>
+                    <input type="url" name="coolify_git_repository" value="{{ $cfg['coolify_git_repository'] ?? '' }}" class="form-control" placeholder="https://github.com/org/app">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Branch</label>
+                    <input type="text" name="coolify_git_branch" value="{{ $cfg['coolify_git_branch'] ?? 'main' }}" class="form-control" placeholder="main">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Port</label>
+                    <input type="text" name="coolify_ports" value="{{ $cfg['coolify_ports'] ?? '' }}" class="form-control" placeholder="3000">
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="card" style="margin-bottom:15px;">
         <div class="card-header"><strong>Panelica Resources</strong> <span style="font-size:11px;color:#888;">&mdash; enforced cgroups/quota limits (full panel parity)</span></div>
         <div class="card-body">

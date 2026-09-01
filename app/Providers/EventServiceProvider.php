@@ -14,6 +14,7 @@ use App\Events\TicketReplied;
 use App\Listeners\ApplyEmailTemplate;
 use App\Listeners\ApplyUpgradeListener;
 use App\Listeners\AutoAcceptOrderListener;
+use App\Listeners\CreditAiPurchasesListener;
 use App\Listeners\LogActivityListener;
 use App\Listeners\LogSentEmailListener;
 use App\Listeners\RecordCronHeartbeat;
@@ -55,6 +56,7 @@ class EventServiceProvider extends ServiceProvider
             [AutoAcceptOrderListener::class, 'handleInvoicePaid'],
             [RenewOnPaymentListener::class, 'handleInvoicePaid'],
             [ApplyUpgradeListener::class, 'handleInvoicePaid'],
+            [CreditAiPurchasesListener::class, 'handleInvoicePaid'],
             LogActivityListener::class,
         ],
         TicketOpened::class => [

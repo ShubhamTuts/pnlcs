@@ -1043,7 +1043,7 @@ class ConfigController extends Controller
     {
         $host = $server->hostname ?? $server->ip_address;
         $port = $server->port ?? match ($server->type) {
-            'panelica' => 8443, 'cpanel' => 2087, 'plesk' => 8443, 'directadmin' => 2222, default => 22
+            'panelica' => 8443, 'cpanel' => 2087, 'plesk' => 8443, 'directadmin' => 2222, 'coolify' => 8000, default => 22
         };
         if (empty($host)) {
             return back()->with('error', __('admin.messages.no_hostname'));

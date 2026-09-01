@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AiGatewayController;
 use App\Http\Controllers\Api\ClientApiController;
 use App\Http\Controllers\Api\DomainApiController;
 use App\Http\Controllers\Api\InvoiceApiController;
@@ -10,6 +11,12 @@ use App\Http\Controllers\Api\TicketApiController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', [SystemApiController::class, 'getHealthStatus']);
+
+Route::prefix('ai/v1')->middleware('ai.key')->group(function () {
+    Route::get('models', [AiGatewayController::class, 'models']);
+    Route::post('chat/completions', [AiGatewayController::class, 'chatCompletions']);
+    Route::get('usage', [AiGatewayController::class, 'usage']);
+});
 
 Route::prefix('v1')->group(function () {
     // ===== SYSTEM (26 endpoints) =====

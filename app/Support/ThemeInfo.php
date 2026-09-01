@@ -32,7 +32,7 @@ class ThemeInfo
         $info->supports = $json['supports'] ?? [];
         $info->path = $path;
         $info->isActive = $isActive;
-        $info->isBuiltin = in_array($slug, ['panelica','starter','flavor','aurora','ember','ocean','forest','midnight','sunset','arctic','terra','neon','coral','slate','royal','mint']);
+        $info->isBuiltin = in_array($slug, ['panelica','starter','flavor','aurora','ember','ocean','forest','midnight','sunset','arctic','terra','neon','coral','slate','royal','mint','webkahost']);
 
         // Screenshot URL
         $screenshotFile = $json['screenshot'] ?? 'screenshot.png';

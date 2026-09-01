@@ -57,6 +57,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.2fa' => AdminTwoFactorVerify::class,
             '2fa' => TwoFactorVerify::class,
             'admin.permission' => CheckAdminPermission::class,
+            'ai.key' => \App\Http\Middleware\AuthenticateAiKey::class,
         ]);
 
         $middleware->redirectGuestsTo(function ($request) {

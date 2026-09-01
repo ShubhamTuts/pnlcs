@@ -16,6 +16,7 @@
         'laravel' => ['client.services.laravel', 'ri-fire-line', __('client.hosting.tools.laravel')],
         'nodejs' => ['client.services.nodejs', 'ri-nodejs-line', __('client.hosting.tools.nodejs')],
         'python' => ['client.services.python', 'ri-terminal-box-line', __('client.hosting.tools.python')],
+        'coolify' => ['client.services.coolify', 'ri-git-branch-line', 'Git & deploy'],
     ];
     $svcShown = array_filter($svcShortcuts, fn ($v, $k) => in_array($k, $svcTools, true), ARRAY_FILTER_USE_BOTH);
 @endphp

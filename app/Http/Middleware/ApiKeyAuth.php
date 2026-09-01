@@ -16,7 +16,7 @@ class ApiKeyAuth
     public function handle(Request $request, Closure $next)
     {
         // Allow health endpoint without auth
-        if ($request->is('api/health') || $request->is('api/v1/gethealthstatus')) {
+        if ($request->is('api/health') || $request->is('api/v1/gethealthstatus') || $request->is('api/ai/*')) {
             return $next($request);
         }
 

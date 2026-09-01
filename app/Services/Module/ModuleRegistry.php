@@ -85,7 +85,7 @@ class ModuleRegistry
     public function serverCredentialRequirement(?string $type): string
     {
         return match (self::key((string) $type)) {
-            'cpanel', 'panelica', 'plesk', 'proxmox', 'vultr' => 'token',
+            'cpanel', 'panelica', 'plesk', 'proxmox', 'vultr', 'coolify' => 'token',
             'directadmin', 'hestiacp' => 'either',
             default => 'none',
         };

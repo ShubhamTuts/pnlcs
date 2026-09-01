@@ -1,0 +1,8 @@
+{
+    "name": "coolify",
+    "type": "server",
+    "version": "1.0.0",
+    "display_name": "Coolify (Webkahost PaaS)",
+    "description": "Git push-to-deploy and one-click WordPress / Node.js on a Coolify instance — the Vercel-shaped half of Webkahost.",
+    "author": {"name": "Webkahost"}
+}

@@ -1,0 +1,37 @@
+/* ===== WEBKAHOST THEME CSS ===== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+
+body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+.section-title, .hero__title, .hero__title-sub, h1, h2, h3, h4 {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+.main-nav {
+    background: rgba(4, 47, 46, 0.94) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(20, 184, 166, 0.18) !important;
+}
+.main-nav.scrolled {
+    background: rgba(4, 47, 46, 0.98) !important;
+    box-shadow: 0 4px 30px rgba(2, 44, 34, 0.45) !important;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #14b8a6, #0f766e) !important;
+    box-shadow: 0 4px 20px rgba(15, 118, 110, 0.35) !important;
+}
+.btn-primary:hover {
+    box-shadow: 0 8px 30px rgba(15, 118, 110, 0.5) !important;
+}
+.btn-accent {
+    background: linear-gradient(135deg, #2dd4bf, #0f766e) !important;
+    box-shadow: 0 4px 20px rgba(20, 184, 166, 0.3) !important;
+}
+
+.pn-brand, .pn-navbar {
+    --primary: #0f766e;
+}

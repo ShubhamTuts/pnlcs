@@ -63,10 +63,13 @@ nav:
       - Products, Services, Orders & Invoices: concepts/products-services-orders-invoices.md
       - Servers & Modules: concepts/servers-and-modules.md
       - The Billing Lifecycle: concepts/billing-lifecycle.md
+  - Architecture:
+      - Webkahost (Coolify + AI): architecture/webkahost.md
   - Guides:
       - Configure Email: guides/configure-email.md
       - Payment Gateways: guides/payment-gateways.md
       - Connect a Server: guides/connect-a-server.md
+      - Connect Coolify (Webkahost PaaS): guides/coolify.md
       - Sell Domains: guides/sell-domains.md
       - Sell Docker Apps: guides/sell-docker-apps.md
       - Tax Rules: guides/tax-rules.md

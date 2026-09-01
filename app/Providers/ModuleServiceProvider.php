@@ -47,6 +47,9 @@ class ModuleServiceProvider extends ServiceProvider
             // Vultr VPS module
             $registry->registerServer("vultr", \Modules\Servers\Vultr\VultrModule::class);
 
+            // Coolify PaaS (Git / WordPress / Node.js) — Webkahost
+            $registry->registerServer('coolify', \Modules\Servers\Coolify\CoolifyModule::class);
+
             // Namecheap Registrar
             $registry->registerRegistrar("namecheap", \Modules\Registrars\Namecheap\NamecheapRegistrar::class);
             // ResellerClub / LogicBoxes Registrar

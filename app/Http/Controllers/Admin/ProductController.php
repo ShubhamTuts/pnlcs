@@ -235,9 +235,27 @@ class ProductController extends Controller
         $product->update($validated);
 
         // The plan the product sells, in the one key every module reads.
-        if ($request->has('package_name')) {
+        if ($request->has('package_name') || $request->has('coolify_git_repository')) {
             $config = $this->productConfig($product->fresh());
-            $config['package_name'] = (string) $request->input('package_name');
+            if ($request->has('package_name')) {
+                $config['package_name'] = (string) $request->input('package_name');
+            }
+            if ($request->has('coolify_git_repository')) {
+                $repo = trim((string) $request->input('coolify_git_repository', ''));
+                if ($repo !== '') {
+                    $config['coolify_git_repository'] = $repo;
+                } else {
+                    unset($config['coolify_git_repository']);
+                }
+                $branch = trim((string) $request->input('coolify_git_branch', 'main'));
+                $config['coolify_git_branch'] = $branch !== '' ? $branch : 'main';
+                $ports = trim((string) $request->input('coolify_ports', ''));
+                if ($ports !== '') {
+                    $config['coolify_ports'] = $ports;
+                } else {
+                    unset($config['coolify_ports']);
+                }
+            }
             $product->update(['config_options' => json_encode($config)]);
         }
 

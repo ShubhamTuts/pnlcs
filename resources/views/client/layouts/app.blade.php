@@ -387,6 +387,14 @@
                     <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>{{ __('client.nav.ssl') }}
                 </a>
             </div>
+            @auth
+            <div class="pn-nav-item">
+                <a href="{{ route("client.ai.agent") }}" class="pn-nav-link {{ request()->routeIs("client.ai.agent*") ? "active" : "" }}">{{ __('client.nav.agent') }}</a>
+            </div>
+            <div class="pn-nav-item">
+                <a href="{{ route("client.ai.index") }}" class="pn-nav-link {{ request()->routeIs("client.ai.index") || request()->routeIs("client.ai.purchase") ? "active" : "" }}">{{ __('client.nav.ai_credits') }}</a>
+            </div>
+            @endauth
             <div class="pn-nav-item">
                 <button type="button" class="pn-nav-link {{ request()->routeIs("client.invoices.*") || request()->routeIs("client.funds.*") || request()->routeIs("client.quotes.*") || request()->routeIs("client.payment-methods.*") || request()->routeIs("client.emails.*") ? "active" : "" }}">{{ __('client.nav.billing') }}
                     <svg class="pn-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
@@ -518,6 +526,10 @@
         <div class="pn-mobile-sec">{{ __('client.nav.services') }}</div>
         <a href="{{ route("client.services.index") }}" style="padding-left:36px">{{ __('client.nav.my_services') }}</a>
         <a href="{{ route("client.store") }}" style="padding-left:36px">{{ __('client.nav.order_new') }}</a>
+        @auth
+        <a href="{{ route("client.ai.agent") }}">{{ __('client.nav.agent') }}</a>
+        <a href="{{ route("client.ai.index") }}">{{ __('client.nav.ai_credits') }}</a>
+        @endauth
         <div class="pn-mobile-sec">{{ __('client.nav.billing') }}</div>
         <a href="{{ route("client.invoices.index") }}" style="padding-left:36px">{{ __('client.nav.invoices') }}</a>
         <a href="{{ route("client.funds.index") }}" style="padding-left:36px">{{ __('client.nav.add_funds') }}</a>

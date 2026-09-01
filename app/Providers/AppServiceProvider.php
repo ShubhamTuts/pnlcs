@@ -78,6 +78,7 @@ class AppServiceProvider extends ServiceProvider
         $registry->registerServer("custom",      \Modules\Servers\Custom\CustomModule::class);
         $registry->registerServer("panelica",    \Modules\Servers\Panelica\PanelicaModule::class);
         $registry->registerServer("cpanel",      \Modules\Servers\CPanel\CPanelModule::class);
+        $registry->registerServer("coolify",     \Modules\Servers\Coolify\CoolifyModule::class);
 
         // Gateway modules
         $registry->registerGateway("banktransfer", \Modules\Gateways\BankTransfer\BankTransferModule::class);

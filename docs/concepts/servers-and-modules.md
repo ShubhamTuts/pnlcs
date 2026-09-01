@@ -17,6 +17,7 @@ provider's API. PNLCS ships with these server modules:
 | Module | What it provisions |
 |--------|--------------------|
 | **Panelica** | Accounts on a Panelica hosting panel (fully tested) |
+| **Coolify** | Git apps, WordPress and Node.js on a Coolify PaaS (Webkahost) |
 | **cPanel** | WHM/cPanel accounts |
 | **Plesk** | Plesk subscriptions |
 | **DirectAdmin** | DirectAdmin users |

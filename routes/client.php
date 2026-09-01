@@ -2,10 +2,12 @@
 
 use App\Http\Controllers\Client\AccountController;
 use App\Http\Controllers\Client\AffiliateController;
+use App\Http\Controllers\Client\AiCreditController;
 use App\Http\Controllers\Client\AnnouncementController;
 use App\Http\Controllers\Client\AuthController;
 use App\Http\Controllers\Client\CartController;
 use App\Http\Controllers\Client\ContactController;
+use App\Http\Controllers\Client\CoolifyDeployController;
 use App\Http\Controllers\Client\DomainController;
 use App\Http\Controllers\Client\DownloadController;
 use App\Http\Controllers\Client\EmailController;
@@ -19,6 +21,7 @@ use App\Http\Controllers\Client\QuoteController;
 use App\Http\Controllers\Client\ServiceController;
 use App\Http\Controllers\Client\SslController;
 use App\Http\Controllers\Client\TicketController;
+use App\Http\Controllers\Client\WebkahostAgentController;
 use App\Http\Controllers\DomainSearchController;
 use App\Http\Middleware\TwoFactorVerify;
 use Illuminate\Support\Facades\Route;
@@ -159,6 +162,17 @@ Route::prefix('client')->name('client.')->middleware('banned.ip')->group(functio
         Route::post('services/{service}/files/upload', [ServiceController::class, 'filesUpload'])->name('services.files.upload');
         Route::post('services/{service}/files/rename', [ServiceController::class, 'filesRename'])->name('services.files.rename');
         Route::post('services/{service}/files/delete', [ServiceController::class, 'filesDelete'])->name('services.files.delete');
+
+        Route::get('services/{service}/coolify', [CoolifyDeployController::class, 'show'])->name('services.coolify');
+        Route::post('services/{service}/coolify/redeploy', [CoolifyDeployController::class, 'redeploy'])->name('services.coolify.redeploy');
+        Route::post('services/{service}/coolify/git', [CoolifyDeployController::class, 'updateGit'])->name('services.coolify.git');
+
+        Route::get('ai', [AiCreditController::class, 'index'])->name('ai.index');
+        Route::post('ai/credits', [AiCreditController::class, 'purchase'])->name('ai.purchase');
+        Route::post('ai/keys', [AiCreditController::class, 'storeKey'])->name('ai.keys.store');
+        Route::post('ai/keys/{key}/revoke', [AiCreditController::class, 'revokeKey'])->name('ai.keys.revoke');
+        Route::get('ai/agent', [WebkahostAgentController::class, 'show'])->name('ai.agent');
+        Route::post('ai/agent', [WebkahostAgentController::class, 'message'])->name('ai.agent.message');
 
         // Domains
         Route::get('domains', [DomainController::class, 'index'])->name('domains.index');
