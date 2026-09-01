@@ -17,6 +17,7 @@ use App\Http\Controllers\Client\InvoiceController;
 use App\Http\Controllers\Client\KbController;
 use App\Http\Controllers\Client\NetworkStatusController;
 use App\Http\Controllers\Client\PaymentMethodController;
+use App\Http\Controllers\Client\PhoneVerificationController;
 use App\Http\Controllers\Client\QuoteController;
 use App\Http\Controllers\Client\ServiceController;
 use App\Http\Controllers\Client\SslController;
@@ -24,6 +25,7 @@ use App\Http\Controllers\Client\TicketController;
 use App\Http\Controllers\Client\WebkahostAgentController;
 use App\Http\Controllers\DomainSearchController;
 use App\Http\Middleware\TwoFactorVerify;
+use App\Models\Service;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('client')->name('client.')->middleware('banned.ip')->group(function () {
@@ -92,6 +94,9 @@ Route::prefix('client')->name('client.')->middleware('banned.ip')->group(functio
 
     Route::middleware(['auth', '2fa'])->group(function () {
         Route::get('/', [HomeController::class, 'index'])->name('home');
+        // Marketing and host-split redirects use /client/home; the named
+        // route is /client. Keep both so guests get login instead of 404.
+        Route::get('home', [HomeController::class, 'index']);
         // Signing out must stay reachable while the code is outstanding.
         Route::post('logout', [AuthController::class, 'logout'])
             ->withoutMiddleware([TwoFactorVerify::class])->name('logout');
@@ -144,7 +149,7 @@ Route::prefix('client')->name('client.')->middleware('banned.ip')->group(functio
         Route::post('services/{service}/containers/email-details', [ServiceController::class, 'emailContainerDetails'])->name('services.containers.email');
         // Opened by hand (a pasted address, a refresh after the redirect) this
         // was a 405 dressed up as a server error. There is nothing to GET here.
-        Route::get('services/{service}/containers/email-details', fn (\App\Models\Service $service) => redirect()->route('client.services.containers', $service));
+        Route::get('services/{service}/containers/email-details', fn (Service $service) => redirect()->route('client.services.containers', $service));
         // Serving an app on the customer's own domain
         Route::post('services/{service}/containers/link-domain', [ServiceController::class, 'linkContainerDomain'])->name('services.containers.link');
         Route::post('services/{service}/containers/unlink-domain', [ServiceController::class, 'unlinkContainerDomain'])->name('services.containers.unlink');
@@ -245,8 +250,8 @@ Route::prefix('client')->name('client.')->middleware('banned.ip')->group(functio
         Route::delete('account/contacts/{contact}', [AccountController::class, 'destroyContact'])->name('account.contacts.destroy');
         Route::get('account/payment-methods', [AccountController::class, 'paymentMethods'])->name('account.payment_methods');
         Route::get('account/security', [AccountController::class, 'security'])->name('account.security');
-        Route::post('account/phone/verification', [\App\Http\Controllers\Client\PhoneVerificationController::class, 'start'])->name('account.phone.verify');
-        Route::post('account/phone/verification-check', [\App\Http\Controllers\Client\PhoneVerificationController::class, 'check'])->name('account.phone.verify_check');
+        Route::post('account/phone/verification', [PhoneVerificationController::class, 'start'])->name('account.phone.verify');
+        Route::post('account/phone/verification-check', [PhoneVerificationController::class, 'check'])->name('account.phone.verify_check');
         Route::post('account/security/sessions/{sessionId}/logout', [AccountController::class, 'logoutSession'])->name('account.security.logout_session');
         Route::match(['get', 'post'], '2fa/enable', [AuthController::class, 'enable2fa'])->name('2fa.enable');
         Route::post('2fa/disable', [AuthController::class, 'disable2fa'])->name('2fa.disable');

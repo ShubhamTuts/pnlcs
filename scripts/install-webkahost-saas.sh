@@ -121,6 +121,22 @@ fi
 
 cd "$APP_DIR"
 composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+
+echo "==> Frontend assets (Vite)"
+# Client/admin layouts use @vite. Without a manifest those pages 500 even
+# though they already have inline CSS. Build if Node is available; OptionalVite
+# still skips tags when the manifest is missing.
+if ! command -v node >/dev/null 2>&1; then
+  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+  apt-get install -y -qq nodejs
+fi
+if command -v npm >/dev/null 2>&1; then
+  npm ci --no-audit --no-fund
+  npm run build
+  rm -rf node_modules
+else
+  echo "npm not found — portal still loads (inline CSS); extra Vite CSS skipped."
+fi
 if [[ ! -f .env ]]; then
   cp .env.example .env
 fi

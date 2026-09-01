@@ -20,6 +20,7 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(\Illuminate\Foundation\Vite::class, \App\Support\OptionalVite::class);
         $this->app->singleton(ModuleRegistry::class);
         $this->app->bind(\App\Contracts\MailboxClientInterface::class, \App\Services\Mail\ImapMailboxClient::class);
         $this->app->singleton(ThemeManager::class);
