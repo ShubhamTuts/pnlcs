@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ServiceStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class Service extends Model
 {
@@ -61,13 +62,20 @@ class Service extends Model
                 return;
             }
 
-            if (! in_array(strtolower((string) $service->status), ['terminated', 'cancelled', 'fraud'], true)) {
-                return;
+            if (in_array(strtolower((string) $service->status), ['terminated', 'cancelled', 'fraud'], true)) {
+                ServiceAddon::where('service_id', $service->id)
+                    ->whereIn('status', ['active', 'pending'])
+                    ->update(['status' => 'cancelled', 'next_due_date' => null]);
             }
 
-            ServiceAddon::where('service_id', $service->id)
-                ->whereIn('status', ['active', 'pending'])
-                ->update(['status' => 'cancelled', 'next_due_date' => null]);
+            try {
+                app(\App\Services\Billing\GatewaySubscriptionService::class)->syncServiceStatus($service);
+            } catch (\Throwable $e) {
+                Log::warning('Gateway subscription sync failed', [
+                    'service_id' => $service->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         });
     }
 
@@ -114,6 +122,11 @@ class Service extends Model
     public function cancellationRequest()
     {
         return $this->hasOne(CancellationRequest::class);
+    }
+
+    public function gatewaySubscriptions()
+    {
+        return $this->hasMany(GatewaySubscription::class);
     }
 
     public function scopeActive($q)

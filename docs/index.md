@@ -19,7 +19,7 @@ language, with no prior WHMCS experience assumed.
 - **Bill customers automatically** — recurring invoices, reminders, suspensions, renewals
 - **Provision accounts automatically** on Panelica, cPanel, Plesk, DirectAdmin,
   HestiaCP, Proxmox, Vultr and Coolify when an order is paid
-- **Take payments** via Stripe, PayPal, Authorize.Net and bank transfer
+- **Take payments** via Stripe, PayPal, Razorpay, Authorize.Net and bank transfer
 - **Support your customers** with tickets, a knowledge base and announcements
 - **Run in 30 languages**, with themes, staff roles, reports and an API
 

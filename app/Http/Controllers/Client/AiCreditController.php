@@ -47,6 +47,7 @@ class AiCreditController extends Controller
         $validated = $request->validate([
             'pack' => 'required|string|max:64',
             'payment_method' => 'required|string|max:50',
+            'subscribe' => 'sometimes|boolean',
         ]);
 
         $client = $this->currentClient();
@@ -76,6 +77,9 @@ class AiCreditController extends Controller
             'tax_rate2' => 0,
             'status' => 'unpaid',
             'payment_method' => $validated['payment_method'],
+            'notes' => ($validated['payment_method'] === 'razorpay' && $request->boolean('subscribe'))
+                ? 'razorpay_subscribe=1'
+                : null,
         ]);
 
         InvoiceItem::create([

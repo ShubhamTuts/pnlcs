@@ -50,6 +50,54 @@ Always place a **test order** and pay it in the gateway's test/sandbox mode
 before accepting real money. Confirm the invoice becomes *Paid* and (if you
 sell hosting) the service is provisioned. Then switch to live keys.
 
+## Razorpay
+
+UPI, cards, netbanking and wallets (India, and Razorpay's other markets).
+Same coverage as Stripe and PayPal: Checkout, signed webhooks, refunds, and
+shop currency. Plus **native Subscriptions** for recurring invoices and
+optional AI credit packs.
+
+1. Create a [Razorpay](https://razorpay.com) account and generate **Key ID**
+   and **Key Secret** (start with `rzp_test_` keys).
+2. **Configuration → Gateways → Razorpay**: paste the keys, set **Test Mode**,
+   enable **Razorpay Subscriptions**, save, enable the gateway.
+3. **Webhook:** `https://your-domain/gateway/razorpay/webhook`
+   Header: `X-Razorpay-Signature`. Paste the **Webhook Secret** into PNLCS.
+   Subscribe at least to:
+   - `payment.captured`
+   - `subscription.charged`
+   - `subscription.cancelled`
+   - `subscription.paused`
+   - `subscription.resumed`
+   - `subscription.halted`
+
+Recurring hosting paid with Razorpay creates a Plan (`POST /v1/plans`) and a
+Subscription (`POST /v1/subscriptions`). Checkout uses `subscription_id`.
+Later `subscription.charged` events pay or raise the next PNLCS invoice.
+The nightly invoice cron **skips** services that already have a live
+Razorpay subscription, so the customer is not billed twice.
+
+AI credit packs: on **AI Credits**, choose Razorpay and tick **Subscribe
+monthly**. Each cycle tops up the same pack (still via an invoice, so the
+wallet credit path stays the same).
+
+Enable **Subscriptions** on the Razorpay dashboard (test and live). If the
+Plans API is not enabled, PNLCS falls back to a one-time Order.
+
+## PayPal subscriptions
+
+PayPal Checkout here is **one invoice at a time**, like Stripe PaymentIntents.
+PNLCS still raises renewal invoices on the billing cycle (`auto_renew` on the
+service). The customer pays each invoice with PayPal Buttons. Native PayPal
+Billing Plans are not used; Razorpay is the gateway that stores a mandate
+and charges it.
+
+!!! note "Payments are verified"
+    One-time Razorpay checkouts verify `order_id|payment_id`. Subscription
+    checkouts verify `payment_id|subscription_id`. Webhooks are HMAC-signed
+    and the payment is re-fetched from Razorpay before the invoice is marked
+    paid.
+
 ## Refunds
 
 Any paid invoice can be refunded — fully or partially — from the admin invoice

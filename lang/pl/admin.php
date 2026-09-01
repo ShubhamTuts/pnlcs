@@ -1121,7 +1121,7 @@ return [
     'gateways.desc_banktransfer' => 'Przyjmuj płatności przez ręczny przelew bankowy.',
     'gateways.desc_mollie' => 'Przyjmuj płatności przez Mollie (Europa).',
     'gateways.desc_paypal' => 'Przyjmuj płatności przez standardowe checkout PayPal.',
-    'gateways.desc_razorpay' => 'Przyjmuj płatności przez Razorpay (Indie).',
+    'gateways.desc_razorpay' => 'Przyjmuj UPI, karty i portfele przez Razorpay, w tym natywne subskrypcje na faktury cykliczne i pakiety kredytów AI.',
     'gateways.desc_stripe' => 'Przyjmuj płatności kartą kredytową/debetową przez Stripe.',
     'gateways.description' => 'Skonfiguruj moduły bramek płatności, aby przyjmować płatności od klientów.',
     'gateways.enable_gateway' => 'Włącz tę bramkę',

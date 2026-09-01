@@ -296,20 +296,30 @@ class GatewayWebhookController extends Controller
         $module = app(\App\Services\Module\ModuleRegistry::class)->getGatewayModule("razorpay");
         if (!$module) return response()->json(["success" => false, "message" => "Not configured"]);
         if ($request->input("confirm")) {
-            // Confirm payment — verify the Razorpay signature and order server-side
-            // before crediting; never trust the browser-supplied result.
             $paymentId = $request->input("razorpay_payment_id");
             $orderId   = $request->input("razorpay_order_id");
+            $subscriptionId = (string) $request->input("razorpay_subscription_id", '');
             $signature = $request->input("razorpay_signature");
 
-            if (!$paymentId || !$orderId || !$signature) {
+            if (!$paymentId || !$signature) {
                 return response()->json(["success" => false, "message" => "Missing payment confirmation fields."]);
             }
-            if (!method_exists($module, "verifyPayment")) {
-                return response()->json(["success" => false, "message" => "Razorpay module not available."]);
+
+            if ($subscriptionId !== '') {
+                if (!method_exists($module, "verifySubscriptionPayment")) {
+                    return response()->json(["success" => false, "message" => "Razorpay module not available."]);
+                }
+                $verified = $module->verifySubscriptionPayment($subscriptionId, $paymentId, $signature, (int) $invoice->id);
+            } else {
+                if (!$orderId) {
+                    return response()->json(["success" => false, "message" => "Missing payment confirmation fields."]);
+                }
+                if (!method_exists($module, "verifyPayment")) {
+                    return response()->json(["success" => false, "message" => "Razorpay module not available."]);
+                }
+                $verified = $module->verifyPayment($orderId, $paymentId, $signature, (int) $invoice->id);
             }
 
-            $verified = $module->verifyPayment($orderId, $paymentId, $signature, (int) $invoice->id);
             if (!($verified["success"] ?? false)) {
                 Log::warning("Razorpay confirm rejected", ["invoice" => $invoice->id, "reason" => $verified["message"] ?? "unknown"]);
                 return response()->json(["success" => false, "message" => $verified["message"] ?? "Payment could not be verified."]);
@@ -318,7 +328,19 @@ class GatewayWebhookController extends Controller
             $this->recordTransaction($invoice, "razorpay", $verified["transaction_id"] ?? $paymentId, (float) ($verified["amount"] ?? $invoice->total));
             return response()->json(["success" => true, "redirect_url" => url("/client/invoices/{$invoice->id}?payment=success")]);
         }
-        // Create order
+
+        $subs = app(\App\Services\Billing\GatewaySubscriptionService::class);
+        if ($subs->invoiceWantsRazorpaySubscription($invoice)) {
+            $started = $subs->startRazorpay($invoice);
+            if ($started["success"] ?? false) {
+                return response()->json($started);
+            }
+            Log::warning("Razorpay subscription start fell back to order", [
+                "invoice" => $invoice->id,
+                "reason" => $started["message"] ?? "unknown",
+            ]);
+        }
+
         $result = $module->capture($invoice, $invoice->amountDue());
         return response()->json($result);
     }

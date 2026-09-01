@@ -84,6 +84,15 @@
                     @endforelse
                 </select>
             </div>
+            @if(in_array('razorpay', $gateways->all(), true))
+            <div class="form-group">
+                <label class="form-label" style="display:flex;gap:8px;align-items:center">
+                    <input type="checkbox" name="subscribe" value="1">
+                    {{ __('client.ai.subscribe_razorpay') }}
+                </label>
+                <p class="form-hint">{{ __('client.ai.subscribe_razorpay_hint') }}</p>
+            </div>
+            @endif
             <button type="submit" class="btn btn-primary">{{ __('client.ai.buy') }}</button>
         </form>
     </div>

@@ -109,9 +109,26 @@ it('still pays an invoice on a razorpay webhook that is signed', function () {
         ['gateway' => 'razorpay', 'setting' => 'webhook_secret'],
         ['value' => 'rzp_hook_secret']
     );
+    GatewaySettings::updateOrCreate(
+        ['gateway' => 'razorpay', 'setting' => 'key_id'],
+        ['value' => 'rzp_test_key']
+    );
+    GatewaySettings::updateOrCreate(
+        ['gateway' => 'razorpay', 'setting' => 'key_secret'],
+        ['value' => 'rzp_secret']
+    );
 
     $invoice = webhookInvoice();
     $body = razorpayWebhookBody($invoice);
+
+    Illuminate\Support\Facades\Http::fake([
+        '*/v1/payments/pay_forged_1' => Illuminate\Support\Facades\Http::response([
+            'id' => 'pay_forged_1',
+            'status' => 'captured',
+            'amount' => 10000,
+            'notes' => ['invoice_id' => (string) $invoice->id],
+        ], 200),
+    ]);
 
     $this->call('POST', '/gateway/razorpay/webhook', [], [], [], [
         'CONTENT_TYPE' => 'application/json',

@@ -63,8 +63,8 @@ See [Servers & Modules](servers-and-modules.md).
 
 ### Gateway
 
-A **payment gateway** is how money comes in — Stripe, PayPal, Authorize.Net,
-bank transfer. See [Payment Gateways](../guides/payment-gateways.md).
+A **payment gateway** is how money comes in — Stripe, PayPal, Razorpay,
+Authorize.Net, bank transfer. See [Payment Gateways](../guides/payment-gateways.md).
 
 ### Registrar
 

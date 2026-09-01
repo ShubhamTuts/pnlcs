@@ -80,6 +80,7 @@ test('the screen offers the fields each module actually reads', function () {
         // Razorpay reads key_id / key_secret.
         ->assertSee('settings[key_id]', false)
         ->assertSee('settings[key_secret]', false)
+        ->assertSee('settings[enable_subscriptions]', false)
         // Stripe needs its webhook secret to verify callbacks.
         ->assertSee('settings[webhook_secret]', false)
         // Bank transfer takes international details.

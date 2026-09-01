@@ -53,6 +53,9 @@ class InvoiceGenerationService
             ->where('next_due_date', '<=', $cutoff)
             ->where('amount', '>', 0)
             ->whereHas('client')
+            ->whereDoesntHave('gatewaySubscriptions', fn ($q) => $q
+                ->where('gateway', 'razorpay')
+                ->whereIn('status', \App\Models\GatewaySubscription::LIVE))
             ->whereDoesntHave('client.invoices', fn ($q) => $q
                 ->whereNotIn('status', InvoiceStatus::settled())
                 ->whereHas('items', fn ($i) => $i->where('type', 'Hosting')->whereColumn('rel_id', 'services.id')))

@@ -1115,7 +1115,7 @@ return [
     'gateways.desc_banktransfer' => '通过人工银行转账接收付款。',
     'gateways.desc_mollie' => '通过 Mollie（欧洲）接收付款。',
     'gateways.desc_paypal' => '通过 PayPal 标准结账接收付款。',
-    'gateways.desc_razorpay' => '通过 Razorpay（印度）接收付款。',
+    'gateways.desc_razorpay' => '通过 Razorpay 接收 UPI、银行卡和钱包付款，并支持周期性发票与 AI 额度包的原生订阅。',
     'gateways.desc_stripe' => '通过 Stripe 接受信用卡或借记卡付款。',
     'gateways.description' => '配置用于接收客户付款的支付网关模块。',
     'gateways.enable_gateway' => '启用此支付网关',

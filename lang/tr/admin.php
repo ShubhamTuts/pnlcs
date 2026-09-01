@@ -1115,7 +1115,7 @@ return [
     'gateways.desc_banktransfer' => 'Accept payments via manual bank wire transfer.',
     'gateways.desc_mollie' => 'Accept payments via Mollie (Europe).',
     'gateways.desc_paypal' => 'Accept payments via PayPal standard checkout.',
-    'gateways.desc_razorpay' => 'Accept payments via Razorpay (India).',
+    'gateways.desc_razorpay' => 'Razorpay ile UPI, kart ve cüzdan alın; yinelenen faturalar ve AI kredi paketleri için yerel Abonelikler dahil.',
     'gateways.desc_stripe' => 'Accept credit/debit card payments via Stripe.',
     'gateways.description' => 'Yapılandır payment gateway modules for accepting payments from customers.',
     'gateways.enable_gateway' => 'Etkinleştir this gateway',
