@@ -73,15 +73,30 @@ Create these in **Products** after connecting a Coolify server
 
 | Product | Server module | Package | Notes |
 |---|---|---|---|
-| Managed WordPress | `coolify` | `wordpress` | One-click `wordpress-with-mysql` |
-| Node.js App | `coolify` | `nodejs` | Set the Git HTTPS URL on the product (or let the customer/agent set it) |
-| Next.js App | `coolify` | `nextjs` | Same, Nixpacks |
-| Static Site | `coolify` | `static` | Static build pack |
-| AI Starter / Builder / Scale | none (invoice item `AiCredits`) | — | Bought under **AI Credits** in the portal |
+| Managed WordPress | `coolify` | `wordpress` | One-click `wordpress-with-mysql` + TLS |
+| Node.js / Next.js / static | `coolify` | `nodejs` / `nextjs` / `static` | Public Git HTTPS |
+| PostgreSQL / MySQL / Redis / MongoDB | `coolify` | `postgresql` etc. | Private DB, connection details in the portal |
+| n8n / Ghost / MinIO | `coolify` | `n8n` / `ghost` / `minio` | One-click services |
+| AI Starter / Builder / Scale | none (`AiCredits`) | — | Or **BYOK** for unlimited own-key inference |
 
 Traditional cPanel-style hosting can still sit beside this: add a Panelica
 (or cPanel) server and sell it as “Web Hosting”. Webkahost then looks like
 Hostinger (shared + WordPress + AI) **and** Vercel (Git apps) in one bill.
+
+## Channels (one SaaS, several doors)
+
+| Channel | Who uses it | How it is created |
+|---|---|---|
+| Shop / order form | Customer | Catalog groups Apps, Databases, One-click |
+| Client portal | Customer | Git, TLS, env, DB connection, AI credits, BYOK |
+| Webkahost Agent | Customer | Natural-language deploy / SSL / usage |
+| AI Gateway API | Apps | `/api/ai/v1` with `wk_live_` (BYOK skips the wallet) |
+| Admin + Artisan | Operator | `webkahost:saas --connect --catalog --brand` |
+| VPS installer | Operator | `scripts/install-webkahost-saas.sh` |
+
+Payment on any of the shop SKUs calls the same Coolify module. The Agent
+does not bypass billing — it only acts on a Coolify service the customer
+already paid for.
 
 ## Coolify wiring
 
@@ -100,13 +115,14 @@ Hostinger (shared + WordPress + AI) **and** Vercel (Git apps) in one bill.
 On payment, `CoolifyModule::create()`:
 
 1. Ensures a Coolify project `webkahost-client-{id}`
-2. Creates a WordPress service **or** a public Git application
+2. Creates a WordPress/one-click **service**, a **database**, or a public Git **application**
 3. Stores UUIDs on `services.module_data`
 4. Marks the PNLCS service **Active** only after Coolify accepts the create
+5. Git apps set `is_auto_deploy_enabled` so a push to `main` redeploys
 
 Suspend stops the resource; terminate deletes it. The customer’s **Git &
 deploy** page can change the repository (HTTPS GitHub / GitLab / Bitbucket /
-Gitea only) and redeploy.
+Gitea only), attach a hostname + Let's Encrypt, set env vars, and redeploy.
 
 ## AI Gateway (Vercel AI Gateway analogue)
 
@@ -129,6 +145,24 @@ curl https://billing.webkahost.com/api/ai/v1/chat/completions \
 Credits are **not** account credit (money). Mixing them would let someone
 pay invoices with leftover tokens.
 
+**BYOK (unlimited):** the customer pastes their own OpenAI/Groq/OpenRouter
+key under **AI Credits**. The Gateway still requires a `wk_live_` identity
+key, but inference is forwarded to the customer's upstream and the wallet
+is not charged (`usage.webkahost_byok: true`). The key is encrypted at rest.
+
+## VPS one-command
+
+```bash
+export WEBKAHOST_DOMAIN=billing.example.com
+sudo bash scripts/install-webkahost-saas.sh
+php artisan webkahost:saas --connect --url=… --token=… --catalog --brand
+```
+
+Caddy on the host listens only on **127.0.0.1:8088**. Coolify's proxy keeps
+**80/443** and terminates Let's Encrypt for `WEBKAHOST_DOMAIN` (see
+`deploy/coolify-proxy/webkahost-billing.yaml`). Customer apps stay on that
+same Coolify proxy. Details: [Connect Coolify](../guides/coolify.md).
+
 ## Webkahost Agent (Hostinger Agent analogue)
 
 The Agent is a **job runner with a chat box**, fenced to the logged-in
@@ -139,6 +173,9 @@ client:
 | `list_services` | This customer’s apps |
 | `deploy_wordpress` | Create or restart WordPress on their Coolify plan |
 | `deploy_git_app` | Point a Git app at a public HTTPS repo and deploy |
+| `deploy_database` | PostgreSQL / MySQL / Redis / … on their DB plan |
+| `deploy_oneclick` | n8n / Ghost / MinIO / Umami / … |
+| `attach_domain` | Hostname + Let's Encrypt |
 | `get_ai_usage` | Credit balance |
 
 It does **not** get a shell on the host, other customers’ data, or payment
@@ -188,7 +225,7 @@ Add a second Coolify destination when the first pool is full (`max_accounts`
 | Edge / CDN | Latency vs Vercel | Cloudflare in front of Traefik, not a new runtime |
 | Functions | `api/` routes | Deploy them *as* the Node app, not a separate SKU |
 | Isolation | Noisy neighbours | One Coolify destination per plan tier, or dedicated VPS (Proxmox/Vultr modules already exist) |
-| Agent + LLM tools | Better than regex | Point the gateway upstream and add tool-calling in `WebkahostAgent` |
+| Agent + LLM tools | Better than regex | Point the gateway upstream (or BYOK) and add tool-calling in `WebkahostAgent` |
 | MCP for IDEs | Hostinger Connector | Expose the same Coolify tools as an MCP server later |
 | Image/video models | Vercel AI Gateway | Extend the catalogue and upstream map |
 | Multi-tenant Coolify | API tokens are instance-wide | Always filter by `webkahost-client-{id}` projects (already done) |
@@ -197,10 +234,11 @@ Add a second Coolify destination when the first pool is full (`max_accounts`
 
 1. Coolify connected, test WordPress order paid → site live with TLS
 2. Node.js product with a Git URL → push to `main` redeploys (Coolify webhook)
-3. Customer buys Builder pack → wallet shows 5,000 credits
+3. Customer buys Builder pack → wallet shows 5,000 credits **or** pastes BYOK
 4. `wk_live_` key chats through `/api/ai/v1` and usage appears
-5. Agent deploys WordPress from a sentence
-6. `php artisan webkahost:brand` — portal says Webkahost, not PNLCS
+5. Agent deploys WordPress or PostgreSQL from a sentence
+6. Customer attaches `shop.example.com` → Coolify requests TLS
+7. `sudo bash scripts/install-webkahost-saas.sh` then `php artisan webkahost:saas --catalog --connect`
 
 That is a hosting company. Vercel’s remaining moat is the network and the
 framework brand, not the billing form.

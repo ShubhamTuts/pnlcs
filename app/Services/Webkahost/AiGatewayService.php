@@ -3,6 +3,7 @@
 namespace App\Services\Webkahost;
 
 use App\Models\AiApiKey;
+use App\Models\AiByokCredential;
 use App\Models\Client;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Http;
@@ -36,13 +37,14 @@ class AiGatewayService
         }
 
         $inputTokens = $this->estimateTokens($messages);
+        $byok = AiByokCredential::activeFor($client);
         $reserve = $this->credits->costFor($model, $inputTokens, 256);
-        if ($this->credits->balance($client) < $reserve) {
-            return ['status' => 402, 'body' => ['error' => ['message' => 'Insufficient AI credits. Buy a pack in the Webkahost portal.', 'type' => 'insufficient_credits']]];
+        if (! $byok && $this->credits->balance($client) < $reserve) {
+            return ['status' => 402, 'body' => ['error' => ['message' => 'Insufficient AI credits. Buy a pack or add a BYOK key in the Webkahost portal.', 'type' => 'insufficient_credits']]];
         }
 
         $started = microtime(true);
-        $upstream = $this->upstream();
+        $upstream = $byok ? $byok->upstream() : $this->upstream();
 
         if ($upstream['url'] !== '') {
             $response = $this->forward($upstream, $model, $payload);
@@ -58,22 +60,35 @@ class AiGatewayService
         $in = (int) ($usage['prompt_tokens'] ?? $inputTokens);
         $out = (int) ($usage['completion_tokens'] ?? $this->estimateTokens([['content' => $body['choices'][0]['message']['content'] ?? '']]));
 
-        $event = $this->credits->charge($client, $model, $in, $out, [
-            'ai_api_key_id' => $key?->id,
-            'source' => $source,
-            'latency_ms' => (int) round((microtime(true) - $started) * 1000),
-            'request_id' => $body['id'] ?? Str::uuid()->toString(),
-        ]);
+        if ($byok) {
+            $event = $this->credits->recordByok($client, $model, $in, $out, [
+                'ai_api_key_id' => $key?->id,
+                'source' => 'byok',
+                'provider' => $byok->provider,
+                'latency_ms' => (int) round((microtime(true) - $started) * 1000),
+                'request_id' => $body['id'] ?? Str::uuid()->toString(),
+            ]);
+            $charged = 0.0;
+        } else {
+            $event = $this->credits->charge($client, $model, $in, $out, [
+                'ai_api_key_id' => $key?->id,
+                'source' => $source,
+                'latency_ms' => (int) round((microtime(true) - $started) * 1000),
+                'request_id' => $body['id'] ?? Str::uuid()->toString(),
+            ]);
 
-        if ($event === null) {
-            return ['status' => 402, 'body' => ['error' => ['message' => 'Insufficient AI credits', 'type' => 'insufficient_credits']]];
+            if ($event === null) {
+                return ['status' => 402, 'body' => ['error' => ['message' => 'Insufficient AI credits', 'type' => 'insufficient_credits']]];
+            }
+            $charged = (float) $event->credits_charged;
         }
 
         $body['usage'] = [
             'prompt_tokens' => $in,
             'completion_tokens' => $out,
             'total_tokens' => $in + $out,
-            'webkahost_credits' => (float) $event->credits_charged,
+            'webkahost_credits' => $charged,
+            'webkahost_byok' => (bool) $byok,
         ];
 
         if ($key) {

@@ -1,0 +1,18 @@
+# Copied onto a Coolify host at /data/coolify/proxy/dynamic/webkahost-billing.yaml
+# so Coolify's Traefik (ports 80/443) terminates Let's Encrypt for billing
+# and forwards to PNLCS on the docker-bridge IP port 8088. The installer fills
+# Host() and the backend URL. Do not bind a second public Caddy to 80/443.
+http:
+  routers:
+    webkahost-billing:
+      entryPoints:
+        - https
+      rule: Host(`BILLING_DOMAIN`)
+      service: webkahost-billing
+      tls:
+        certResolver: letsencrypt
+  services:
+    webkahost-billing:
+      loadBalancer:
+        servers:
+          - url: http://DOCKER_HOST_IP:8088

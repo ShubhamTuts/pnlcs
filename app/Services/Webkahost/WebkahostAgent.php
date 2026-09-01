@@ -3,6 +3,7 @@
 namespace App\Services\Webkahost;
 
 use App\Models\AiAgentMessage;
+use App\Models\AiByokCredential;
 use App\Models\Client;
 use App\Models\Service;
 use App\Services\Module\ModuleRegistry;
@@ -55,10 +56,17 @@ class WebkahostAgent
             ? implode("\n\n", $parts)
             : $this->helpText();
 
-        $this->credits->charge($client, 'webkahost-agent', max(8, (int) ceil(strlen($message) / 4)), max(8, (int) ceil(strlen($reply) / 4)), [
-            'source' => 'agent',
-            'status' => 'ok',
-        ]);
+        if (AiByokCredential::activeFor($client)) {
+            $this->credits->recordByok($client, 'webkahost-agent', max(8, (int) ceil(strlen($message) / 4)), max(8, (int) ceil(strlen($reply) / 4)), [
+                'source' => 'agent',
+                'provider' => 'byok',
+            ]);
+        } else {
+            $this->credits->charge($client, 'webkahost-agent', max(8, (int) ceil(strlen($message) / 4)), max(8, (int) ceil(strlen($reply) / 4)), [
+                'source' => 'agent',
+                'status' => 'ok',
+            ]);
+        }
 
         AiAgentMessage::create([
             'client_id' => $client->id,
@@ -91,14 +99,35 @@ class WebkahostAgent
             return [['name' => 'deploy_wordpress', 'arguments' => array_filter(['domain' => $domain])]];
         }
 
-        if (preg_match('/node(\.?js)?|next\.?js|git|repository|repo/', $text)) {
-            $repo = $this->extractGitUrl($message);
+        if (preg_match('/\b(postgres(?:ql)?|mysql|mariadb|mongo(?:db)?|redis|clickhouse)\b/', $text, $m)) {
+            $engine = strtolower($m[1]);
+            $engine = match ($engine) {
+                'postgres', 'postgresql' => 'postgresql',
+                'mongo', 'mongodb' => 'mongodb',
+                default => $engine,
+            };
+
+            return [['name' => 'deploy_database', 'arguments' => ['engine' => $engine]]];
+        }
+
+        $repo = $this->extractGitUrl($message);
+        if ($repo !== null || preg_match('/node(\.?js)?|next\.?js|\bgit\b|repository|\brepo\b/', $text)) {
             $domain = $this->extractDomain($message);
 
             return [['name' => 'deploy_git_app', 'arguments' => array_filter([
                 'git_repository' => $repo,
                 'domain' => $domain,
             ])]];
+        }
+
+        if (preg_match('/\b(n8n|ghost|minio|umami|plausible|nocodb|grafana)\b/', $text, $m)) {
+            return [['name' => 'deploy_oneclick', 'arguments' => ['kind' => strtolower($m[1])]]];
+        }
+
+        if (preg_match('/\b(ssl|tls|certificate)\b/', $text) || preg_match('/\b(attach|add|point)\b.+\b(domain|hostname)\b/', $text)) {
+            $domain = $this->extractDomain($message);
+
+            return [['name' => 'attach_domain', 'arguments' => array_filter(['domain' => $domain])]];
         }
 
         if (preg_match('/\b(help|what can you)\b/', $text)) {
@@ -118,6 +147,9 @@ class WebkahostAgent
             'list_services' => $this->listServices($client),
             'deploy_wordpress' => $this->deployOnCoolify($client, 'wordpress', $arguments),
             'deploy_git_app' => $this->deployOnCoolify($client, 'git', $arguments),
+            'deploy_database' => $this->deployOnCoolify($client, (string) ($arguments['engine'] ?? 'postgresql'), $arguments),
+            'deploy_oneclick' => $this->deployOnCoolify($client, (string) ($arguments['kind'] ?? 'n8n'), $arguments),
+            'attach_domain' => $this->attachDomain($client, $arguments),
             'get_ai_usage' => $this->aiUsage($client),
             default => ['ok' => false, 'summary' => "Unknown tool {$name}."],
         };
@@ -172,7 +204,7 @@ class WebkahostAgent
      */
     private function deployOnCoolify(Client $client, string $kind, array $arguments): array
     {
-        $service = $this->coolifyService($client);
+        $service = $this->coolifyService($client, $kind === 'git' ? 'nodejs' : $kind);
         if (! $service) {
             return [
                 'ok' => false,
@@ -240,13 +272,54 @@ class WebkahostAgent
         ];
     }
 
-    private function coolifyService(Client $client): ?Service
+    private function attachDomain(Client $client, array $arguments): array
     {
-        return Service::where('client_id', $client->id)
+        $domain = trim((string) ($arguments['domain'] ?? ''));
+        if ($domain === '') {
+            return ['ok' => false, 'summary' => 'Tell me the hostname to attach, for example app.example.com.'];
+        }
+
+        $service = $this->coolifyService($client);
+        if (! $service) {
+            return ['ok' => false, 'summary' => 'No Coolify app on this account to attach a domain to.'];
+        }
+
+        $module = app(ModuleRegistry::class)->getServerModule('coolify');
+        if (! $module instanceof CoolifyModule) {
+            return ['ok' => false, 'summary' => 'Coolify is not registered on this installation.'];
+        }
+
+        $result = $module->attachDomain($service, $domain, true);
+        $ok = (bool) ($result['success'] ?? false);
+
+        return ['ok' => $ok, 'summary' => (string) ($result['message'] ?? 'Domain update failed.'), 'result' => $result];
+    }
+
+    private function coolifyService(Client $client, ?string $kind = null): ?Service
+    {
+        $rows = Service::where('client_id', $client->id)
             ->whereIn('status', ['active', 'pending'])
             ->whereHas('product', fn ($q) => $q->where('server_type', 'coolify'))
+            ->with('product')
             ->orderByDesc('id')
-            ->first();
+            ->get();
+
+        if ($kind) {
+            $match = $rows->first(function (Service $service) use ($kind) {
+                $config = $service->product?->config_options ?? [];
+                if (is_string($config)) {
+                    $config = json_decode($config, true) ?: [];
+                }
+                $package = strtolower((string) ($config['package_name'] ?? $config['coolify_kind'] ?? ''));
+
+                return $package === $kind;
+            });
+            if ($match) {
+                return $match;
+            }
+        }
+
+        return $rows->first();
     }
 
     private function resourceUuid(Service $service): string
@@ -284,8 +357,10 @@ class WebkahostAgent
         return "I am the Webkahost Agent. I can:\n"
             ."- Deploy WordPress on your PaaS plan (\"deploy wordpress on blog.example.com\")\n"
             ."- Deploy a Node.js / Next.js app from Git (\"deploy https://github.com/me/app\")\n"
-            ."- List your running apps\n"
-            ."- Check AI credit balance and usage\n\n"
-            .'AI Gateway keys live under AI Credits — drop the base URL into any OpenAI-compatible SDK.';
+            ."- Provision PostgreSQL / MySQL / Redis (\"deploy postgres\")\n"
+            ."- One-click n8n / Ghost / MinIO (\"deploy n8n\")\n"
+            ."- Attach a domain and request TLS (\"ssl on app.example.com\")\n"
+            ."- List your running apps and check AI credits\n\n"
+            .'BYOK keys live under AI Credits — your own OpenAI/Groq key is unlimited. Gateway keys still start with wk_live_.';
     }
 }

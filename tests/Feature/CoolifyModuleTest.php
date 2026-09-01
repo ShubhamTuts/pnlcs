@@ -172,3 +172,70 @@ test('the product create form offers coolify', function () {
 
     expect($html)->toContain('value="coolify"');
 });
+
+it('deploys postgresql as a coolify database', function () {
+    Http::fake([
+        '*/api/v1/projects' => Http::response(['uuid' => 'proj-db'], 201),
+        '*/api/v1/databases/postgresql' => Http::response(['uuid' => 'db-1'], 201),
+    ]);
+
+    $server = coolifyServer();
+    $service = coolifyService($server, ['package_name' => 'postgresql']);
+    $result = (new CoolifyModule)->create($service);
+
+    expect($result['success'])->toBeTrue()
+        ->and($service->fresh()->module_data['coolify_resource'])->toBe('database')
+        ->and($service->fresh()->module_data['coolify_uuid'])->toBe('db-1');
+});
+
+it('attaches a domain and asks coolify for tls', function () {
+    Http::fake(['*/api/v1/applications/app-ssl' => Http::response(['uuid' => 'app-ssl'], 200)]);
+
+    $server = coolifyServer();
+    $service = coolifyService($server, ['package_name' => 'nodejs'], [
+        'coolify_uuid' => 'app-ssl',
+        'coolify_resource' => 'application',
+    ]);
+
+    $result = (new CoolifyModule)->attachDomain($service, 'shop.example.com', true);
+
+    expect($result['success'])->toBeTrue()
+        ->and($service->fresh()->domain)->toBe('shop.example.com')
+        ->and($service->fresh()->module_data['coolify_fqdn'])->toBe('https://shop.example.com');
+
+    Http::assertSent(fn ($request) => str_contains($request->url(), '/applications/app-ssl')
+        && $request->method() === 'PATCH'
+        && ($request['is_force_https_enabled'] ?? false) === true);
+});
+
+it('deploys n8n as a coolify one-click service', function () {
+    Http::fake([
+        '*/api/v1/projects' => Http::response(['uuid' => 'proj-n8n'], 201),
+        '*/api/v1/services' => Http::response(['uuid' => 'svc-n8n'], 201),
+    ]);
+
+    $server = coolifyServer();
+    $service = coolifyService($server, ['package_name' => 'n8n']);
+    $result = (new CoolifyModule)->create($service);
+
+    expect($result['success'])->toBeTrue()
+        ->and($service->fresh()->module_data['coolify_resource'])->toBe('service')
+        ->and($service->fresh()->module_data['coolify_kind'])->toBe('n8n')
+        ->and($service->fresh()->module_data['coolify_uuid'])->toBe('svc-n8n');
+});
+
+it('sets an environment variable on a git application', function () {
+    Http::fake(['*/api/v1/applications/app-env/envs' => Http::response(['uuid' => 'env-1'], 201)]);
+
+    $server = coolifyServer();
+    $service = coolifyService($server, ['package_name' => 'nodejs'], [
+        'coolify_uuid' => 'app-env',
+        'coolify_resource' => 'application',
+    ]);
+
+    $result = (new CoolifyModule)->setEnvironmentVariable($service, 'DATABASE_URL', 'postgres://db');
+
+    expect($result['success'])->toBeTrue();
+    Http::assertSent(fn ($request) => str_contains($request->url(), '/applications/app-env/envs')
+        && $request['key'] === 'DATABASE_URL');
+});

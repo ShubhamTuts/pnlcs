@@ -45,13 +45,7 @@ class CoolifyModule extends AbstractServerModule
      */
     public function listPackages(Server $server): array
     {
-        return [
-            ['id' => 'wordpress', 'name' => 'WordPress (one-click)'],
-            ['id' => 'nodejs', 'name' => 'Node.js (Git + Nixpacks)'],
-            ['id' => 'nextjs', 'name' => 'Next.js (Git)'],
-            ['id' => 'static', 'name' => 'Static site (Git)'],
-            ['id' => 'git', 'name' => 'Any Git repository'],
-        ];
+        return $this->kinds();
     }
 
     /**
@@ -82,9 +76,12 @@ class CoolifyModule extends AbstractServerModule
             return $this->buildResult(false, 'Could not create a Coolify project for this customer.');
         }
 
-        $result = $kind === 'wordpress'
-            ? $this->createWordpress($server, $service, $projectUuid, $destination)
-            : $this->createGitApplication($server, $service, $projectUuid, $destination, $kind);
+        $result = match (true) {
+            $kind === 'wordpress' => $this->createWordpress($server, $service, $projectUuid, $destination),
+            $this->isDatabaseKind($kind) => $this->createDatabase($server, $service, $projectUuid, $destination, $kind),
+            $this->isOneClickKind($kind) => $this->createOneClickService($server, $service, $projectUuid, $destination, $kind),
+            default => $this->createGitApplication($server, $service, $projectUuid, $destination, $kind),
+        };
 
         if (! ($result['success'] ?? false)) {
             $this->logAction($service, 'create', $result);
@@ -95,7 +92,7 @@ class CoolifyModule extends AbstractServerModule
         $uuid = (string) ($result['data']['uuid'] ?? '');
         $this->setModuleData($service, [
             'coolify_uuid' => $uuid,
-            'coolify_resource' => $kind === 'wordpress' ? 'service' : 'application',
+            'coolify_resource' => $this->resourceKindFor($kind),
             'coolify_kind' => $kind,
             'coolify_project_uuid' => $projectUuid,
             'coolify_server_uuid' => $destination,
@@ -109,7 +106,7 @@ class CoolifyModule extends AbstractServerModule
             'username' => $uuid !== '' ? $uuid : $service->username,
         ]);
 
-        $out = $this->buildResult(true, $kind === 'wordpress' ? 'WordPress deployed on Coolify.' : 'Application created on Coolify.', $result['data']);
+        $out = $this->buildResult(true, $this->createdMessage($kind), $result['data']);
         $this->logAction($service, 'create', $out);
 
         return $out;
@@ -289,6 +286,235 @@ class CoolifyModule extends AbstractServerModule
     }
 
     /**
+     * Point Traefik at a hostname and force HTTPS (Let's Encrypt).
+     */
+    public function attachDomain(Service $service, string $domain, bool $forceHttps = true): array
+    {
+        $server = $this->getServer($service);
+        if (! $server) {
+            return $this->buildResult(false, 'No Coolify server configured.');
+        }
+
+        $uuid = $this->resourceUuid($service);
+        if ($uuid === '' || $this->resourceType($service) === 'database') {
+            return $this->buildResult(false, 'SSL/domains apply to apps and one-click services, not to private databases.');
+        }
+
+        $domain = strtolower(trim($domain));
+        $domain = preg_replace('#^https?://#', '', $domain) ?? $domain;
+        $domain = rtrim($domain, '/');
+        if ($domain === '' || ! str_contains($domain, '.')) {
+            return $this->buildResult(false, 'Enter a hostname like app.example.com.');
+        }
+
+        $url = 'https://'.$domain;
+        $payload = [
+            'domains' => $url,
+            'is_force_https_enabled' => $forceHttps,
+        ];
+
+        $result = $this->api($server, 'PATCH', $this->resourcePath($service, $uuid), $payload);
+        if (! ($result['success'] ?? false) && $this->resourceType($service) === 'service') {
+            $result = $this->api($server, 'PATCH', "services/{$uuid}", [
+                'urls' => [['name' => 'web', 'url' => $url]],
+            ]);
+        }
+
+        if (! ($result['success'] ?? false)) {
+            return $this->buildResult(false, "Domain/SSL update failed: {$result['message']}");
+        }
+
+        $this->setModuleData($service, [
+            'coolify_fqdn' => $url,
+            'coolify_force_https' => $forceHttps,
+        ]);
+        $service->update(['domain' => $domain]);
+
+        return $this->buildResult(true, 'Domain attached. Coolify will request a Let\'s Encrypt certificate.', [
+            'fqdn' => $url,
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function setEnvironmentVariable(Service $service, string $key, string $value): array
+    {
+        $server = $this->getServer($service);
+        if (! $server) {
+            return $this->buildResult(false, 'No Coolify server configured.');
+        }
+
+        $uuid = $this->resourceUuid($service);
+        if ($uuid === '' || $this->resourceType($service) === 'database') {
+            return $this->buildResult(false, 'Environment variables belong on applications.');
+        }
+
+        $key = trim($key);
+        if ($key === '' || ! preg_match('/^[A-Z][A-Z0-9_]*$/', $key)) {
+            return $this->buildResult(false, 'Environment keys must look like DATABASE_URL.');
+        }
+
+        $path = $this->resourceType($service) === 'service'
+            ? "services/{$uuid}/envs"
+            : "applications/{$uuid}/envs";
+
+        $result = $this->api($server, 'POST', $path, [
+            'key' => $key,
+            'value' => $value,
+            'is_preview' => false,
+        ]);
+
+        if (! ($result['success'] ?? false)) {
+            return $this->buildResult(false, "Env update failed: {$result['message']}");
+        }
+
+        return $this->buildResult(true, "Set {$key}.");
+    }
+
+    /**
+     * Host / user / port the customer needs to connect a billed database.
+     *
+     * @return array<string, mixed>
+     */
+    public function connectionInfo(Service $service): array
+    {
+        $data = $this->getModuleData($service);
+        if (($data['coolify_resource'] ?? '') !== 'database') {
+            return [];
+        }
+
+        $server = $this->getServer($service);
+        $uuid = $this->resourceUuid($service);
+        if (! $server || $uuid === '') {
+            return ['kind' => $data['coolify_kind'] ?? 'database'];
+        }
+
+        $result = $this->api($server, 'GET', "databases/{$uuid}");
+        $raw = ($result['success'] ?? false) ? ($result['raw'] ?? []) : [];
+
+        return [
+            'kind' => $data['coolify_kind'] ?? ($raw['database_type'] ?? 'database'),
+            'uuid' => $uuid,
+            'status' => $raw['status'] ?? ($data['coolify_status'] ?? $service->status),
+            'public' => (bool) ($raw['is_public'] ?? false),
+            'host' => $raw['internal_db_url'] ?? $raw['public_db_url'] ?? ($data['coolify_db_host'] ?? null),
+            'port' => $raw['public_port'] ?? $raw['internal_port'] ?? null,
+            'username' => $raw['postgres_user'] ?? $raw['mysql_user'] ?? $raw['mongo_initdb_root_username'] ?? $raw['redis_username'] ?? null,
+            'database' => $raw['postgres_db'] ?? $raw['mysql_database'] ?? $raw['mongo_initdb_database'] ?? null,
+        ];
+    }
+
+    /**
+     * @return list<array{id: string, name: string}>
+     */
+    public function kinds(): array
+    {
+        return [
+            ['id' => 'wordpress', 'name' => 'WordPress (one-click + SSL)'],
+            ['id' => 'nodejs', 'name' => 'Node.js (Git + Nixpacks)'],
+            ['id' => 'nextjs', 'name' => 'Next.js (Git)'],
+            ['id' => 'static', 'name' => 'Static site (Git)'],
+            ['id' => 'git', 'name' => 'Any Git repository'],
+            ['id' => 'dockerfile', 'name' => 'Dockerfile (Git)'],
+            ['id' => 'dockercompose', 'name' => 'Docker Compose (Git)'],
+            ['id' => 'postgresql', 'name' => 'PostgreSQL'],
+            ['id' => 'mysql', 'name' => 'MySQL'],
+            ['id' => 'mariadb', 'name' => 'MariaDB'],
+            ['id' => 'mongodb', 'name' => 'MongoDB'],
+            ['id' => 'redis', 'name' => 'Redis'],
+            ['id' => 'keydb', 'name' => 'KeyDB'],
+            ['id' => 'dragonfly', 'name' => 'Dragonfly'],
+            ['id' => 'clickhouse', 'name' => 'ClickHouse'],
+            ['id' => 'n8n', 'name' => 'n8n'],
+            ['id' => 'ghost', 'name' => 'Ghost'],
+            ['id' => 'minio', 'name' => 'MinIO'],
+            ['id' => 'umami', 'name' => 'Umami'],
+            ['id' => 'plausible', 'name' => 'Plausible'],
+            ['id' => 'nocodb', 'name' => 'NocoDB'],
+            ['id' => 'grafana', 'name' => 'Grafana'],
+        ];
+    }
+
+    public function isDatabaseKind(string $kind): bool
+    {
+        return in_array($kind, ['postgresql', 'mysql', 'mariadb', 'mongodb', 'redis', 'keydb', 'dragonfly', 'clickhouse'], true);
+    }
+
+    public function isOneClickKind(string $kind): bool
+    {
+        return in_array($kind, ['n8n', 'ghost', 'minio', 'umami', 'plausible', 'nocodb', 'grafana'], true);
+    }
+
+    private function resourceKindFor(string $kind): string
+    {
+        if ($this->isDatabaseKind($kind)) {
+            return 'database';
+        }
+
+        return ($kind === 'wordpress' || $this->isOneClickKind($kind)) ? 'service' : 'application';
+    }
+
+    private function createdMessage(string $kind): string
+    {
+        return match (true) {
+            $kind === 'wordpress' => 'WordPress deployed on Coolify with TLS.',
+            $this->isDatabaseKind($kind) => strtoupper($kind).' is running on Coolify.',
+            $this->isOneClickKind($kind) => $kind.' deployed on Coolify.',
+            default => 'Application created on Coolify.',
+        };
+    }
+
+    private function createDatabase(Server $server, Service $service, string $projectUuid, string $destination, string $kind): array
+    {
+        $payload = [
+            'name' => $this->resourceName($service),
+            'description' => 'Webkahost managed '.$kind,
+            'project_uuid' => $projectUuid,
+            'server_uuid' => $destination,
+            'environment_name' => 'production',
+            'instant_deploy' => true,
+            'is_public' => false,
+        ];
+
+        $result = $this->api($server, 'POST', 'databases/'.$kind, $payload);
+        if (! ($result['success'] ?? false)) {
+            return $this->buildResult(false, "Database deploy failed: {$result['message']}");
+        }
+
+        return $this->buildResult(true, 'Database created.', [
+            'uuid' => $this->extractUuid($result['raw']),
+        ]);
+    }
+
+    private function createOneClickService(Server $server, Service $service, string $projectUuid, string $destination, string $kind): array
+    {
+        $url = $this->publicUrl($service);
+        $payload = [
+            'type' => $kind,
+            'name' => $this->resourceName($service),
+            'description' => 'Webkahost one-click '.$kind,
+            'project_uuid' => $projectUuid,
+            'server_uuid' => $destination,
+            'environment_name' => 'production',
+            'instant_deploy' => true,
+        ];
+        if ($url !== '') {
+            $payload['urls'] = [['name' => $kind, 'url' => $url]];
+        }
+
+        $result = $this->api($server, 'POST', 'services', $payload);
+        if (! ($result['success'] ?? false)) {
+            return $this->buildResult(false, "One-click {$kind} deploy failed: {$result['message']}");
+        }
+
+        return $this->buildResult(true, $kind.' created.', [
+            'uuid' => $this->extractUuid($result['raw']),
+            'fqdn' => $url,
+        ]);
+    }
+
+    /**
      * Snapshot the customer can read without another Coolify round-trip.
      *
      * @return array<string, mixed>
@@ -420,7 +646,13 @@ class CoolifyModule extends AbstractServerModule
         }
 
         $branch = $this->gitBranch($service);
-        $buildPack = $kind === 'static' ? 'static' : 'nixpacks';
+        $buildPack = match ($kind) {
+            'static' => 'static',
+            'dockerfile' => 'dockerfile',
+            'dockercompose' => 'dockercompose',
+            'dockerimage' => 'dockerimage',
+            default => 'nixpacks',
+        };
         $ports = $this->portsExposes($service, $kind);
 
         $payload = [
@@ -432,12 +664,16 @@ class CoolifyModule extends AbstractServerModule
             'build_pack' => $buildPack,
             'ports_exposes' => $ports,
             'instant_deploy' => true,
+            'is_auto_deploy_enabled' => true,
+            'is_force_https_enabled' => true,
+            'autogenerate_domain' => true,
             'name' => $this->resourceName($service),
         ];
 
         $url = $this->publicUrl($service);
         if ($url !== '') {
             $payload['domains'] = $url;
+            $payload['autogenerate_domain'] = false;
         }
 
         $result = $this->api($server, 'POST', 'applications/public', $payload);
@@ -553,16 +789,23 @@ class CoolifyModule extends AbstractServerModule
 
     private function resourcePath(Service $service, string $uuid): string
     {
-        return $this->resourceType($service) === 'service'
-            ? "services/{$uuid}"
-            : "applications/{$uuid}";
+        return match ($this->resourceType($service)) {
+            'service' => "services/{$uuid}",
+            'database' => "databases/{$uuid}",
+            default => "applications/{$uuid}",
+        };
     }
 
     private function resourceType(Service $service): string
     {
-        return ($this->getModuleData($service)['coolify_resource'] ?? '') === 'service'
-            ? 'service'
-            : 'application';
+        $stored = (string) ($this->getModuleData($service)['coolify_resource'] ?? '');
+        if (in_array($stored, ['service', 'database', 'application'], true)) {
+            return $stored;
+        }
+
+        $kind = $this->deployKind($service);
+
+        return $this->resourceKindFor($kind);
     }
 
     private function resourceUuid(Service $service): string
@@ -574,10 +817,9 @@ class CoolifyModule extends AbstractServerModule
     {
         $config = $this->productConfig($service);
         $kind = strtolower((string) ($config['package_name'] ?? $config['coolify_kind'] ?? 'git'));
+        $ids = array_column($this->kinds(), 'id');
 
-        return in_array($kind, ['wordpress', 'nodejs', 'nextjs', 'static', 'git'], true)
-            ? $kind
-            : 'git';
+        return in_array($kind, $ids, true) ? $kind : 'git';
     }
 
     /**
@@ -659,7 +901,7 @@ class CoolifyModule extends AbstractServerModule
      */
     private function extractUuid(array $raw): string
     {
-        foreach (['uuid', 'application_uuid', 'service_uuid'] as $key) {
+        foreach (['uuid', 'application_uuid', 'service_uuid', 'database_uuid'] as $key) {
             if (! empty($raw[$key]) && is_string($raw[$key])) {
                 return $raw[$key];
             }

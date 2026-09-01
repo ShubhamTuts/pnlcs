@@ -108,6 +108,27 @@ class AiCreditService
         });
     }
 
+    /**
+     * BYOK calls are unlimited. We still write a usage row so the portal
+     * shows activity, but the wallet is not touched.
+     */
+    public function recordByok(Client $client, string $model, int $inputTokens, int $outputTokens, array $context = []): AiUsageEvent
+    {
+        return AiUsageEvent::create([
+            'client_id' => $client->id,
+            'ai_api_key_id' => $context['ai_api_key_id'] ?? null,
+            'source' => $context['source'] ?? 'byok',
+            'model' => $model,
+            'provider' => $context['provider'] ?? 'byok',
+            'input_tokens' => $inputTokens,
+            'output_tokens' => $outputTokens,
+            'credits_charged' => 0,
+            'latency_ms' => $context['latency_ms'] ?? null,
+            'status' => 'byok',
+            'request_id' => $context['request_id'] ?? null,
+        ]);
+    }
+
     public function costFor(string $model, int $inputTokens, int $outputTokens): float
     {
         $rates = self::catalogue()[$model] ?? self::catalogue()['gpt-4o-mini'];

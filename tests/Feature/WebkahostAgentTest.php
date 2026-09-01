@@ -34,6 +34,27 @@ it('maps a github url onto the git deploy tool', function () {
         ->and($plan[0]['arguments']['git_repository'] ?? null)->toBe('https://github.com/me/node-app');
 });
 
+it('maps a postgres sentence onto the database tool', function () {
+    $plan = app(WebkahostAgent::class)->plan('please deploy postgresql for me');
+
+    expect($plan[0]['name'])->toBe('deploy_database')
+        ->and($plan[0]['arguments']['engine'] ?? null)->toBe('postgresql');
+});
+
+it('maps an ssl sentence onto attach_domain', function () {
+    $plan = app(WebkahostAgent::class)->plan('ssl on shop.example.com');
+
+    expect($plan[0]['name'])->toBe('attach_domain')
+        ->and($plan[0]['arguments']['domain'] ?? null)->toBe('shop.example.com');
+});
+
+it('maps an n8n sentence onto the one-click tool', function () {
+    $plan = app(WebkahostAgent::class)->plan('deploy n8n for me');
+
+    expect($plan[0]['name'])->toBe('deploy_oneclick')
+        ->and($plan[0]['arguments']['kind'] ?? null)->toBe('n8n');
+});
+
 it('lists only this customer\'s services', function () {
     [$user, $client] = agentUser();
     $other = Client::factory()->create();

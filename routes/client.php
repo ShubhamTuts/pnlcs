@@ -166,11 +166,15 @@ Route::prefix('client')->name('client.')->middleware('banned.ip')->group(functio
         Route::get('services/{service}/coolify', [CoolifyDeployController::class, 'show'])->name('services.coolify');
         Route::post('services/{service}/coolify/redeploy', [CoolifyDeployController::class, 'redeploy'])->name('services.coolify.redeploy');
         Route::post('services/{service}/coolify/git', [CoolifyDeployController::class, 'updateGit'])->name('services.coolify.git');
+        Route::post('services/{service}/coolify/domain', [CoolifyDeployController::class, 'updateDomain'])->name('services.coolify.domain');
+        Route::post('services/{service}/coolify/env', [CoolifyDeployController::class, 'updateEnv'])->name('services.coolify.env');
 
         Route::get('ai', [AiCreditController::class, 'index'])->name('ai.index');
         Route::post('ai/credits', [AiCreditController::class, 'purchase'])->name('ai.purchase');
         Route::post('ai/keys', [AiCreditController::class, 'storeKey'])->name('ai.keys.store');
         Route::post('ai/keys/{key}/revoke', [AiCreditController::class, 'revokeKey'])->name('ai.keys.revoke');
+        Route::post('ai/byok', [AiCreditController::class, 'saveByok'])->name('ai.byok');
+        Route::post('ai/byok/disable', [AiCreditController::class, 'disableByok'])->name('ai.byok.disable');
         Route::get('ai/agent', [WebkahostAgentController::class, 'show'])->name('ai.agent');
         Route::post('ai/agent', [WebkahostAgentController::class, 'message'])->name('ai.agent.message');
 

@@ -1,9 +1,46 @@
 # Connect Coolify (Webkahost PaaS)
 
-Coolify is the Git / Docker half of Webkahost. PNLCS bills the customer;
-Coolify builds and runs the app. See the [full architecture](../architecture/webkahost.md).
+Coolify is the Git / Docker / database half of Webkahost. PNLCS bills the
+customer; Coolify builds, stores and terminates the resource. See the
+[full architecture](../architecture/webkahost.md).
 
-## Add the server
+## One-command VPS (SaaS)
+
+On a fresh Ubuntu 22.04/24.04 VPS (root):
+
+```bash
+export WEBKAHOST_DOMAIN=billing.example.com
+export WEBKAHOST_COOLIFY_DOMAIN=deploy.example.com
+curl -fsSL https://raw.githubusercontent.com/ShubhamTuts/pnlcs/main/scripts/install-webkahost-saas.sh | bash
+```
+
+The script installs Docker, Coolify (which **owns public 80/443** for
+customer apps and Let's Encrypt), PHP 8.4, MariaDB, a loopback Caddy on
+`127.0.0.1:8088` for PNLCS, this repository, then:
+
+```bash
+php artisan webkahost:brand
+php artisan webkahost:saas --catalog
+php artisan optimize
+```
+
+It also writes `deploy/coolify-proxy/webkahost-billing.yaml` into Coolify's
+proxy so `WEBKAHOST_DOMAIN` gets a certificate and forwards to billing.
+A cron entry runs `artisan schedule:run` every minute (invoices, suspend,
+SSL polls, queues).
+
+After Coolify is up, create an API token and:
+
+```bash
+php artisan webkahost:saas --connect \
+  --url=https://deploy.example.com \
+  --token=YOUR_COOLIFY_TOKEN \
+  --server-uuid=OPTIONAL_DESTINATION_UUID
+```
+
+`--dry-run` prints the plan and writes nothing.
+
+## Add the server by hand
 
 **Configuration → Servers → Add Server**, type **Coolify (Webkahost PaaS)**.
 
@@ -14,19 +51,30 @@ Coolify builds and runs the app. See the [full architecture](../architecture/web
 | Access Hash | Coolify API token (**Keys → API tokens**) |
 | Username | Optional destination **server UUID**. Empty = first Coolify server |
 
-Press **Test Connection**. A green result means the token can call `/api/v1/version` or `/api/v1/servers`.
+Press **Test Connection**.
 
 ## Products
 
-Create a product, set **Server module** to Coolify, and pick a **Package**:
+`php artisan webkahost:saas --catalog` creates three groups:
 
-- **WordPress (one-click)** — no Git URL needed
-- **Node.js / Next.js / static / any Git** — set **Git repository (HTTPS)** on the product, or let the customer (or the Agent) set it later
+- **Apps** — WordPress, Node.js, Next.js, static
+- **Databases** — PostgreSQL, MySQL, MariaDB, MongoDB, Redis, ClickHouse
+- **One-click** — n8n, Ghost, MinIO, Umami, Plausible, NocoDB, Grafana
 
-Auto-setup should be **On payment** so nothing is built until the invoice is paid.
+Or create a product yourself: **Server module** Coolify, pick a **Package**.
+Auto-setup **On payment**. Git kinds need a public HTTPS repository.
+
+## SSL
+
+Customer apps: Traefik + Let's Encrypt on Coolify. The customer attaches a
+hostname on **Git & deploy** (`is_force_https_enabled`). Billing host: Caddy
+in the installer script.
 
 ## What the customer sees
 
-An active Coolify service gets a **Git & deploy** page: live URL, UUID, redeploy, and (for Git apps) repository + branch.
-
-The **Webkahost Agent** can deploy WordPress or a public Git repo from a sentence, but only onto a Coolify plan this customer already owns.
+- Live URL, UUID, redeploy
+- Git repo + branch (apps)
+- Domain + TLS form
+- Env vars (Git apps)
+- Connection host/user/db (managed databases)
+- BYOK + Agent under **AI Credits**

@@ -22,6 +22,7 @@ class CoolifyDeployController extends Controller
         return view('client.services.coolify', [
             'service' => $service->load('product', 'server'),
             'deployment' => $module->deploymentSummary($service),
+            'connection' => $module->connectionInfo($service),
         ]);
     }
 
@@ -52,6 +53,37 @@ class CoolifyDeployController extends Controller
             $validated['git_repository'],
             $validated['git_branch'] ?? 'main'
         );
+
+        return back()->with($result['success'] ? 'success' : 'error', $result['message']);
+    }
+
+    public function updateDomain(Request $request, Service $service)
+    {
+        $this->guard($service);
+        $module = $this->module();
+        abort_unless($module, 404);
+
+        $validated = $request->validate([
+            'domain' => 'required|string|max:253',
+        ]);
+
+        $result = $module->attachDomain($service, $validated['domain'], true);
+
+        return back()->with($result['success'] ? 'success' : 'error', $result['message']);
+    }
+
+    public function updateEnv(Request $request, Service $service)
+    {
+        $this->guard($service);
+        $module = $this->module();
+        abort_unless($module, 404);
+
+        $validated = $request->validate([
+            'key' => 'required|string|max:80',
+            'value' => 'nullable|string|max:4000',
+        ]);
+
+        $result = $module->setEnvironmentVariable($service, $validated['key'], (string) ($validated['value'] ?? ''));
 
         return back()->with($result['success'] ? 'success' : 'error', $result['message']);
     }

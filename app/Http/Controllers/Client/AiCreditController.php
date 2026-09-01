@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Client;
 use App\Http\Controllers\Concerns\ResolvesClient;
 use App\Http\Controllers\Controller;
 use App\Models\AiApiKey;
+use App\Models\AiByokCredential;
 use App\Models\AiCreditPack;
 use App\Models\AiUsageEvent;
 use App\Models\Invoice;
@@ -36,6 +37,8 @@ class AiCreditController extends Controller
             'usage' => $usage,
             'gateways' => $gateways,
             'models' => AiCreditService::catalogue(),
+            'byok' => AiByokCredential::where('client_id', $client->id)->first(),
+            'byokProviders' => AiByokCredential::providers(),
         ]);
     }
 
@@ -113,5 +116,59 @@ class AiCreditController extends Controller
         $key->forceFill(['revoked_at' => now()])->save();
 
         return back()->with('success', __('client.ai.key_revoked'));
+    }
+
+    public function saveByok(Request $request)
+    {
+        $validated = $request->validate([
+            'provider' => 'required|in:'.implode(',', array_keys(AiByokCredential::providers())),
+            'api_key' => 'required|string|min:8|max:512',
+            'base_url' => 'nullable|url|max:255',
+        ]);
+
+        $client = $this->currentClient();
+        abort_unless($client, 403);
+
+        $base = rtrim((string) ($validated['base_url'] ?? ''), '/');
+        if ($validated['provider'] === 'custom' && $base === '') {
+            return back()->with('error', __('client.ai.byok_url_required'));
+        }
+
+        if ($base !== '' && ! $this->byokUrlAllowed($base)) {
+            return back()->with('error', __('client.ai.byok_url_https'));
+        }
+
+        AiByokCredential::updateOrCreate(
+            ['client_id' => $client->id],
+            [
+                'provider' => $validated['provider'],
+                'base_url' => $base !== '' ? $base : null,
+                'api_key' => $validated['api_key'],
+                'enabled' => true,
+            ]
+        );
+
+        return back()->with('success', __('client.ai.byok_saved'));
+    }
+
+    public function disableByok()
+    {
+        $client = $this->currentClient();
+        abort_unless($client, 403);
+
+        AiByokCredential::where('client_id', $client->id)->update(['enabled' => false]);
+
+        return back()->with('success', __('client.ai.byok_disabled'));
+    }
+
+    private function byokUrlAllowed(string $url): bool
+    {
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+        if (in_array($host, ['localhost', '127.0.0.1'], true) || str_ends_with($host, '.test')) {
+            return in_array($scheme, ['http', 'https'], true);
+        }
+
+        return $scheme === 'https';
     }
 }

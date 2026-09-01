@@ -144,3 +144,51 @@ it('creates an unpaid invoice when a credit pack is purchased', function () {
         ->and($invoice->items()->where('type', 'AiCredits')->exists())->toBeTrue()
         ->and($invoice->status)->toBe('unpaid');
 });
+
+it('lets BYOK skip the credit wallet', function () {
+    Http::fake([
+        'https://llm.webkahost.test/v1/chat/completions' => Http::response([
+            'id' => 'chatcmpl-byok',
+            'object' => 'chat.completion',
+            'choices' => [['index' => 0, 'message' => ['role' => 'assistant', 'content' => 'pong'], 'finish_reason' => 'stop']],
+            'usage' => ['prompt_tokens' => 4, 'completion_tokens' => 1, 'total_tokens' => 5],
+        ], 200),
+    ]);
+
+    [$user, $client] = aiClientUser();
+    \App\Models\AiByokCredential::create([
+        'client_id' => $client->id,
+        'provider' => 'custom',
+        'base_url' => 'https://llm.webkahost.test/v1',
+        'api_key' => 'sk-customer-secret',
+        'enabled' => true,
+    ]);
+    $issued = AiApiKey::issue($client, 'BYOK');
+
+    $this->postJson('/api/ai/v1/chat/completions', [
+        'model' => 'gpt-4o-mini',
+        'messages' => [['role' => 'user', 'content' => 'ping']],
+    ], ['Authorization' => 'Bearer '.$issued['plaintext']])
+        ->assertOk()
+        ->assertJsonPath('usage.webkahost_byok', true)
+        ->assertJsonPath('usage.webkahost_credits', 0);
+
+    expect((float) AiWallet::where('client_id', $client->id)->value('balance'))->toBe(0.0);
+});
+
+it('saves a BYOK key from the portal', function () {
+    [$user, $client] = aiClientUser();
+
+    $this->actingAs($user)
+        ->post(route('client.ai.byok'), [
+            'provider' => 'openai',
+            'api_key' => 'sk-test-byok-key-123456',
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    $row = \App\Models\AiByokCredential::where('client_id', $client->id)->first();
+    expect($row)->not->toBeNull()
+        ->and($row->enabled)->toBeTrue()
+        ->and($row->api_key)->toBe('sk-test-byok-key-123456');
+});

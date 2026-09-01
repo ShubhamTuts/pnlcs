@@ -84,7 +84,7 @@
         ['k'=>'laravel','name'=>__('client.hosting.laravel.title'),'desc'=>__('client.hosting.laravel.subtitle'),'ic'=>'ri-fire-line','c'=>'#ef4444','route'=>route('client.services.laravel',$service)],
         ['k'=>'nodejs','name'=>__('client.hosting.nodejs.title'),'desc'=>__('client.hosting.nodejs.subtitle'),'ic'=>'ri-nodejs-line','c'=>'#22c55e','route'=>route('client.services.nodejs',$service)],
         ['k'=>'python','name'=>__('client.hosting.python.title'),'desc'=>__('client.hosting.python.subtitle'),'ic'=>'ri-terminal-box-line','c'=>'#3b82f6','route'=>route('client.services.python',$service)],
-        ['k'=>'coolify','name'=>'Git & deploy','desc'=>'WordPress, Node.js, redeploys','ic'=>'ri-git-branch-line','c'=>'#0f766e','route'=>route('client.services.coolify',$service)],
+        ['k'=>'coolify','name'=>'Git & deploy','desc'=>'Apps, databases, TLS, redeploys','ic'=>'ri-git-branch-line','c'=>'#0f766e','route'=>route('client.services.coolify',$service)],
     ];
 @endphp
 

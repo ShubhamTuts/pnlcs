@@ -15,6 +15,47 @@
         <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:rgba(255,255,255,0.65);margin-bottom:8px">{{ __('client.ai.balance') }}</div>
         <div style="font-size:42px;font-weight:900;color:#fff;letter-spacing:-1px">{{ number_format($balance, 2) }}</div>
         <div style="font-size:13px;color:rgba(255,255,255,0.55);margin-top:6px">{{ __('client.ai.credits_unit') }}</div>
+        @if($byok?->enabled)
+        <div style="margin-top:10px;font-size:13px;color:#99f6e4">{{ __('client.ai.byok_active') }}</div>
+        @endif
+    </div>
+</div>
+
+<div class="pn-card mb-24">
+    <div class="pn-card-header"><span class="pn-card-title">{{ __('client.ai.byok') }}</span></div>
+    <div class="pn-card-body">
+        <p class="form-hint" style="margin-top:0">{{ __('client.ai.byok_hint') }}</p>
+        @if($byok)
+            <p>{{ __('client.ai.byok_saved_as', ['provider' => $byok->provider, 'last4' => $byok->lastFour()]) }}
+                @if($byok->enabled)<strong> — {{ __('client.ai.byok_unlimited') }}</strong>@endif
+            </p>
+            @if($byok->enabled)
+            <form method="POST" action="{{ route('client.ai.byok.disable') }}" style="margin-bottom:18px">
+                @csrf
+                <button class="btn btn-outline">{{ __('client.ai.byok_disable') }}</button>
+            </form>
+            @endif
+        @endif
+        <form method="POST" action="{{ route('client.ai.byok') }}">
+            @csrf
+            <div class="form-group">
+                <label class="form-label" for="provider">{{ __('client.ai.byok_provider') }}</label>
+                <select id="provider" name="provider" class="form-control" required>
+                    @foreach($byokProviders as $id => $url)
+                        <option value="{{ $id }}" @selected(($byok->provider ?? 'openai') === $id)>{{ strtoupper($id) }}@if($url) — {{ $url }}@endif</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="api_key">{{ __('client.ai.byok_key') }}</label>
+                <input id="api_key" type="password" name="api_key" required class="form-control" autocomplete="off" placeholder="sk-…">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="base_url">{{ __('client.ai.byok_url') }}</label>
+                <input id="base_url" type="url" name="base_url" class="form-control" value="{{ $byok->base_url ?? '' }}" placeholder="https://api.openai.com/v1">
+            </div>
+            <button type="submit" class="btn btn-primary">{{ __('client.ai.byok_save') }}</button>
+        </form>
     </div>
 </div>
 
