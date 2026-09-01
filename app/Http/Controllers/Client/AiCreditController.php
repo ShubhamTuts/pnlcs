@@ -87,7 +87,7 @@ class AiCreditController extends Controller
             'client_id' => $client->id,
             'type' => 'AiCredits',
             'rel_id' => $pack->id,
-            'description' => "Webkahost AI Credits — {$pack->name} ({$pack->credits} credits)",
+            'description' => "Oneploy AI Credits — {$pack->name} ({$pack->credits} credits)",
             'amount' => $pack->price,
             'taxed' => false,
         ]);

@@ -4,10 +4,12 @@ use App\Http\Middleware\AdminAuthenticate;
 use App\Http\Middleware\AdminTwoFactorVerify;
 use App\Http\Middleware\AffiliateTracking;
 use App\Http\Middleware\ApiKeyAuth;
+use App\Http\Middleware\AuthenticateAiKey;
 use App\Http\Middleware\BlockBannedIp;
 use App\Http\Middleware\CheckAdminPermission;
 use App\Http\Middleware\MaintenanceMode;
 use App\Http\Middleware\RedirectToInstaller;
+use App\Http\Middleware\ResolveOneployHost;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\TwoFactorVerify;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -44,6 +46,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // content. This is domain-agnostic: no per-domain APP_URL to maintain.
         $middleware->trustProxies(at: '*');
         $middleware->prependToGroup('web', RedirectToInstaller::class);
+        $middleware->appendToGroup('web', ResolveOneployHost::class);
         $middleware->appendToGroup('web', AffiliateTracking::class);
         $middleware->appendToGroup('web', SetLocale::class);
         $middleware->appendToGroup('web', MaintenanceMode::class);
@@ -57,7 +60,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.2fa' => AdminTwoFactorVerify::class,
             '2fa' => TwoFactorVerify::class,
             'admin.permission' => CheckAdminPermission::class,
-            'ai.key' => \App\Http\Middleware\AuthenticateAiKey::class,
+            'ai.key' => AuthenticateAiKey::class,
         ]);
 
         $middleware->redirectGuestsTo(function ($request) {

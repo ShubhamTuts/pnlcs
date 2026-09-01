@@ -9,9 +9,9 @@ use App\Models\GatewaySubscription;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Service;
+use App\Models\Transaction;
 use App\Services\InvoiceService;
 use App\Services\Module\ModuleRegistry;
-use Illuminate\Support\Facades\Log;
 use Modules\Gateways\Razorpay\RazorpayModule;
 
 /**
@@ -162,7 +162,7 @@ class GatewaySubscriptionService
             return $verified;
         }
 
-        if (\App\Models\Transaction::where('gateway', 'razorpay')->where('transaction_id', $paymentId)->exists()) {
+        if (Transaction::where('gateway', 'razorpay')->where('transaction_id', $paymentId)->exists()) {
             return ['success' => true, 'message' => 'Charge already recorded.', 'transaction_id' => $paymentId];
         }
 
@@ -393,7 +393,7 @@ class GatewaySubscriptionService
             'client_id' => $client->id,
             'type' => 'AiCredits',
             'rel_id' => $pack->id,
-            'description' => "Webkahost AI Credits — {$pack->name} ({$pack->credits} credits)",
+            'description' => "Oneploy AI Credits — {$pack->name} ({$pack->credits} credits)",
             'amount' => $pack->price,
             'taxed' => false,
         ]);

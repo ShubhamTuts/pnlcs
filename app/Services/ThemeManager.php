@@ -25,19 +25,19 @@ class ThemeManager
         $themes = [];
         $activeSlug = $this->getActiveSlug();
 
-        if (!is_dir($this->themesPath)) {
+        if (! is_dir($this->themesPath)) {
             return $themes;
         }
 
         $dirs = File::directories($this->themesPath);
         foreach ($dirs as $dir) {
-            $jsonPath = $dir . '/theme.json';
-            if (!file_exists($jsonPath)) {
+            $jsonPath = $dir.'/theme.json';
+            if (! file_exists($jsonPath)) {
                 continue;
             }
 
             $json = json_decode(file_get_contents($jsonPath), true);
-            if (!is_array($json)) {
+            if (! is_array($json)) {
                 continue;
             }
 
@@ -50,6 +50,7 @@ class ThemeManager
             if ($a->isActive !== $b->isActive) {
                 return $a->isActive ? -1 : 1;
             }
+
             return strcmp($a->name, $b->name);
         });
 
@@ -70,15 +71,15 @@ class ThemeManager
     public function getActive(): ?ThemeInfo
     {
         $slug = $this->getActiveSlug();
-        $path = $this->themesPath . '/' . $slug;
-        $jsonPath = $path . '/theme.json';
+        $path = $this->themesPath.'/'.$slug;
+        $jsonPath = $path.'/theme.json';
 
-        if (!file_exists($jsonPath)) {
+        if (! file_exists($jsonPath)) {
             return null;
         }
 
         $json = json_decode(file_get_contents($jsonPath), true);
-        if (!is_array($json)) {
+        if (! is_array($json)) {
             return null;
         }
 
@@ -90,15 +91,20 @@ class ThemeManager
      */
     public function activate(string $slug): bool
     {
-        $path = $this->themesPath . '/' . $slug;
-        if (!is_dir($path) || !file_exists($path . '/theme.json')) {
+        $path = $this->themesPath.'/'.$slug;
+        if (! is_dir($path) || ! file_exists($path.'/theme.json')) {
             return false;
         }
 
         Setting::set('active_theme_slug', $slug, 'appearance');
 
+        $viewPath = $this->themesPath.'/'.$slug.'/views';
+        if (is_dir($viewPath)) {
+            app('view')->prependLocation($viewPath);
+        }
+
         // Also apply theme colors as the active color preset
-        $json = json_decode(file_get_contents($path . '/theme.json'), true);
+        $json = json_decode(file_get_contents($path.'/theme.json'), true);
         if (isset($json['colors']) && is_array($json['colors'])) {
             // Merge theme colors with existing ThemeService colors for full 56-token coverage
             $starterColors = ThemeService::getPresets()['starter']['colors'];
@@ -108,6 +114,7 @@ class ThemeManager
         }
 
         ThemeService::clearCache();
+
         return true;
     }
 
@@ -116,7 +123,7 @@ class ThemeManager
      */
     public function install(UploadedFile $file): array
     {
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $tmpPath = $file->getPathname();
 
         if ($zip->open($tmpPath) !== true) {
@@ -141,20 +148,23 @@ class ThemeManager
             }
         }
 
-        if (!$themeJsonContent) {
+        if (! $themeJsonContent) {
             $zip->close();
+
             return ['success' => false, 'message' => __('messages.theme.no_theme_json')];
         }
 
         $themeJson = json_decode($themeJsonContent, true);
-        if (!is_array($themeJson) || empty($themeJson['slug'])) {
+        if (! is_array($themeJson) || empty($themeJson['slug'])) {
             $zip->close();
+
             return ['success' => false, 'message' => __('messages.theme.invalid_theme_json')];
         }
 
         $slug = preg_replace('/[^a-z0-9_-]/', '', strtolower($themeJson['slug']));
         if (empty($slug)) {
             $zip->close();
+
             return ['success' => false, 'message' => __('messages.theme.invalid_slug')];
         }
 
@@ -162,20 +172,21 @@ class ThemeManager
         $themes = $this->getInstalled();
         if (isset($themes[$slug]) && $themes[$slug]->isBuiltin) {
             $zip->close();
+
             return ['success' => false, 'message' => __('messages.theme.cannot_overwrite_builtin')];
         }
 
-        $destPath = $this->themesPath . '/' . $slug;
+        $destPath = $this->themesPath.'/'.$slug;
 
         // Extract to temp, then move
-        $tmpExtract = sys_get_temp_dir() . '/pnlcs_theme_' . uniqid();
+        $tmpExtract = sys_get_temp_dir().'/pnlcs_theme_'.uniqid();
         $zip->extractTo($tmpExtract);
         $zip->close();
 
         // The actual files may be nested inside a folder
         $sourceDir = $tmpExtract;
         if ($rootPrefix) {
-            $sourceDir = $tmpExtract . '/' . rtrim($rootPrefix, '/');
+            $sourceDir = $tmpExtract.'/'.rtrim($rootPrefix, '/');
         }
 
         // Remove old version if exists
@@ -203,12 +214,13 @@ class ThemeManager
             return ['success' => false, 'message' => __('messages.theme.cannot_delete_active')];
         }
 
-        $path = $this->themesPath . '/' . $slug;
-        if (!is_dir($path)) {
+        $path = $this->themesPath.'/'.$slug;
+        if (! is_dir($path)) {
             return ['success' => false, 'message' => __('messages.theme.not_found')];
         }
 
         File::deleteDirectory($path);
+
         return ['success' => true];
     }
 
@@ -218,7 +230,7 @@ class ThemeManager
     public function getViewPath(): ?string
     {
         $slug = $this->getActiveSlug();
-        $viewPath = $this->themesPath . '/' . $slug . '/views';
+        $viewPath = $this->themesPath.'/'.$slug.'/views';
 
         if (is_dir($viewPath)) {
             return $viewPath;
@@ -233,10 +245,10 @@ class ThemeManager
     public function getAssetUrl(): ?string
     {
         $slug = $this->getActiveSlug();
-        $assetPath = $this->themesPath . '/' . $slug . '/assets';
+        $assetPath = $this->themesPath.'/'.$slug.'/assets';
 
         if (is_dir($assetPath)) {
-            return '/themes/' . $slug . '/assets';
+            return '/themes/'.$slug.'/assets';
         }
 
         return null;
@@ -248,6 +260,7 @@ class ThemeManager
     public function getDarkColors(): array
     {
         $theme = $this->getActive();
+
         return $theme ? $theme->dark_colors : [];
     }
 }

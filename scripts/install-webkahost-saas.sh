@@ -1,29 +1,59 @@
 #!/usr/bin/env bash
-# Webkahost SaaS — one-command VPS bootstrap.
+# Oneploy.dev SaaS — one-command VPS bootstrap.
 #
-# Installs Docker, Coolify (PaaS + Traefik/Caddy TLS for customer apps),
-# PHP 8.4, MariaDB, this PNLCS tree, brands the portal, seeds the catalog,
-# and puts billing behind Coolify's existing 80/443 proxy (no port fight).
+# Installs Docker, Coolify (PaaS + Traefik TLS for customer apps),
+# PHP 8.4, MariaDB, this PNLCS tree, brands Oneploy, seeds the catalog,
+# and puts marketing / client / billing behind Coolify's 80/443 proxy.
 #
 # Usage (Ubuntu 22.04 / 24.04, as root):
-#   export WEBKAHOST_DOMAIN=billing.example.com
-#   export WEBKAHOST_COOLIFY_DOMAIN=deploy.example.com   # optional
+#   export ONEPLOY_DOMAIN=oneploy.dev
+#   export ONEPLOY_COOLIFY_DOMAIN=deploy.oneploy.dev   # optional
 #   curl -fsSL https://raw.githubusercontent.com/ShubhamTuts/pnlcs/main/scripts/install-webkahost-saas.sh | bash
 #
-# From a clone (this branch, until merged):
-#   export WEBKAHOST_DOMAIN=billing.example.com
-#   sudo bash scripts/install-webkahost-saas.sh
+# Hosts:
+#   oneploy.dev              marketing
+#   client.oneploy.dev       client portal (services, domains, Agent)
+#   billing.oneploy.dev      invoices, AI credits, payments
+#
+# Legacy: WEBKAHOST_DOMAIN still works as a single public hostname.
 set -euo pipefail
 
-DOMAIN="${WEBKAHOST_DOMAIN:-}"
-COOLIFY_DOMAIN="${WEBKAHOST_COOLIFY_DOMAIN:-}"
-APP_DIR="${WEBKAHOST_APP_DIR:-/opt/webkahost}"
-REPO="${WEBKAHOST_REPO:-https://github.com/ShubhamTuts/pnlcs.git}"
-BRANCH="${WEBKAHOST_BRANCH:-main}"
-DB_NAME="${WEBKAHOST_DB:-pnlcs}"
-DB_USER="${WEBKAHOST_DB_USER:-pnlcs}"
-DB_PASS="${WEBKAHOST_DB_PASS:-$(openssl rand -hex 16)}"
-BILLING_PORT="${WEBKAHOST_BILLING_PORT:-8088}"
+COOLIFY_DOMAIN="${ONEPLOY_COOLIFY_DOMAIN:-${WEBKAHOST_COOLIFY_DOMAIN:-}}"
+APP_DIR="${ONEPLOY_APP_DIR:-${WEBKAHOST_APP_DIR:-/opt/oneploy}}"
+REPO="${ONEPLOY_REPO:-${WEBKAHOST_REPO:-https://github.com/ShubhamTuts/pnlcs.git}}"
+BRANCH="${ONEPLOY_BRANCH:-${WEBKAHOST_BRANCH:-main}}"
+DB_NAME="${ONEPLOY_DB:-${WEBKAHOST_DB:-pnlcs}}"
+DB_USER="${ONEPLOY_DB_USER:-${WEBKAHOST_DB_USER:-pnlcs}}"
+DB_PASS="${ONEPLOY_DB_PASS:-${WEBKAHOST_DB_PASS:-$(openssl rand -hex 16)}}"
+BILLING_PORT="${ONEPLOY_BILLING_PORT:-${WEBKAHOST_BILLING_PORT:-8088}}"
+
+ROOT_DOMAIN="${ONEPLOY_DOMAIN:-}"
+MARKETING_HOST="${ONEPLOY_MARKETING_HOST:-}"
+CLIENT_HOST="${ONEPLOY_CLIENT_HOST:-}"
+BILLING_HOST="${ONEPLOY_BILLING_HOST:-}"
+
+if [[ -z "$ROOT_DOMAIN" && -n "${WEBKAHOST_DOMAIN:-}" ]]; then
+  ROOT_DOMAIN="${WEBKAHOST_DOMAIN}"
+fi
+if [[ -z "$MARKETING_HOST" ]]; then
+  MARKETING_HOST="${ROOT_DOMAIN}"
+fi
+if [[ -n "$ROOT_DOMAIN" ]]; then
+  CLIENT_HOST="${CLIENT_HOST:-client.${ROOT_DOMAIN}}"
+  BILLING_HOST="${BILLING_HOST:-billing.${ROOT_DOMAIN}}"
+fi
+# Single-host legacy: WEBKAHOST_DOMAIN with no ONEPLOY_* split.
+if [[ -z "${ONEPLOY_DOMAIN:-}" && -n "${WEBKAHOST_DOMAIN:-}" && -z "${ONEPLOY_CLIENT_HOST:-}" ]]; then
+  MARKETING_HOST="${WEBKAHOST_DOMAIN}"
+  CLIENT_HOST="${WEBKAHOST_DOMAIN}"
+  BILLING_HOST="${WEBKAHOST_DOMAIN}"
+fi
+
+DOMAIN="${MARKETING_HOST}"
+SESSION_DOMAIN=""
+if [[ "$MARKETING_HOST" == *.* && "$CLIENT_HOST" != "$MARKETING_HOST" ]]; then
+  SESSION_DOMAIN=".${MARKETING_HOST}"
+fi
 
 if [[ "$(id -u)" -ne 0 ]]; then
   echo "Run as root: sudo bash $0" >&2
@@ -31,7 +61,7 @@ if [[ "$(id -u)" -ne 0 ]]; then
 fi
 
 if [[ -z "$DOMAIN" ]]; then
-  echo "Set WEBKAHOST_DOMAIN=billing.example.com (the PNLCS hostname)." >&2
+  echo "Set ONEPLOY_DOMAIN=oneploy.dev (or WEBKAHOST_DOMAIN=billing.example.com)." >&2
   exit 1
 fi
 
@@ -79,7 +109,7 @@ systemctl enable --now mariadb
 mysql -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 mysql -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}'; GRANT ALL ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost'; FLUSH PRIVILEGES;"
 
-echo "==> PNLCS / Webkahost"
+echo "==> PNLCS / Oneploy.dev"
 mkdir -p "$(dirname "$APP_DIR")"
 if [[ ! -d "$APP_DIR/.git" ]]; then
   git clone --branch "$BRANCH" --depth 1 "$REPO" "$APP_DIR"
@@ -107,7 +137,7 @@ fi
     }
     return \$e.PHP_EOL.\$k.'='.\$v.PHP_EOL;
 };
-\$e = \$set(\$e, 'APP_NAME', 'Webkahost');
+\$e = \$set(\$e, 'APP_NAME', 'Oneploy');
 \$e = \$set(\$e, 'APP_ENV', 'production');
 \$e = \$set(\$e, 'APP_DEBUG', 'false');
 \$e = \$set(\$e, 'APP_URL', 'https://${DOMAIN}');
@@ -117,12 +147,18 @@ fi
 \$e = \$set(\$e, 'DB_DATABASE', '${DB_NAME}');
 \$e = \$set(\$e, 'DB_USERNAME', '${DB_USER}');
 \$e = \$set(\$e, 'DB_PASSWORD', '${DB_PASS}');
+\$e = \$set(\$e, 'ONEPLOY_MARKETING_HOST', '${MARKETING_HOST}');
+\$e = \$set(\$e, 'ONEPLOY_CLIENT_HOST', '${CLIENT_HOST}');
+\$e = \$set(\$e, 'ONEPLOY_BILLING_HOST', '${BILLING_HOST}');
+if ('${SESSION_DOMAIN}' !== '') {
+    \$e = \$set(\$e, 'SESSION_DOMAIN', '${SESSION_DOMAIN}');
+}
 file_put_contents(\$f, \$e);
 "
 
 "$PHP_BIN" artisan migrate --force
 "$PHP_BIN" artisan storage:link --force || true
-"$PHP_BIN" artisan webkahost:brand --no-interaction
+"$PHP_BIN" artisan oneploy:brand --no-interaction
 "$PHP_BIN" artisan webkahost:saas --catalog --no-interaction
 "$PHP_BIN" artisan optimize
 
@@ -156,20 +192,26 @@ HOST_IP="${HOST_IP:-172.17.0.1}"
 install_coolify_tls_route() {
   local dest="$1"
   mkdir -p "$(dirname "$dest")"
-  local src="${APP_DIR}/deploy/coolify-proxy/webkahost-billing.yaml"
+  local src="${APP_DIR}/deploy/coolify-proxy/oneploy.yaml"
   if [[ ! -f "$src" ]]; then
-    echo "Missing $src — skip Coolify TLS route (billing stays on 127.0.0.1:${BILLING_PORT})." >&2
+    src="${APP_DIR}/deploy/coolify-proxy/webkahost-billing.yaml"
+  fi
+  if [[ ! -f "$src" ]]; then
+    echo "Missing Coolify proxy template — skip TLS route (app stays on 127.0.0.1:${BILLING_PORT})." >&2
     return 0
   fi
-  sed -e "s/BILLING_DOMAIN/${DOMAIN}/g" -e "s/DOCKER_HOST_IP/${HOST_IP}/g" "$src" > "$dest"
+  sed -e "s/MARKETING_DOMAIN/${MARKETING_HOST}/g" \
+      -e "s/CLIENT_DOMAIN/${CLIENT_HOST}/g" \
+      -e "s/BILLING_DOMAIN/${BILLING_HOST}/g" \
+      -e "s/DOCKER_HOST_IP/${HOST_IP}/g" "$src" > "$dest"
   echo "Wrote Coolify TLS route ${dest}"
 }
 
 if [[ -d /data/coolify/proxy ]]; then
   if [[ -d /data/coolify/proxy/dynamic ]]; then
-    install_coolify_tls_route /data/coolify/proxy/dynamic/webkahost-billing.yaml
+    install_coolify_tls_route /data/coolify/proxy/dynamic/oneploy.yaml
   else
-    install_coolify_tls_route /data/coolify/proxy/webkahost-billing.yaml
+    install_coolify_tls_route /data/coolify/proxy/oneploy.yaml
   fi
   docker ps --format '{{.Names}}' | grep -qi coolify-proxy && docker restart coolify-proxy || true
 fi
@@ -183,12 +225,14 @@ CRON
 chmod 644 /etc/cron.d/webkahost
 
 echo
-echo "Webkahost billing (loopback): http://127.0.0.1:${BILLING_PORT}"
-echo "Public URL after DNS + Coolify proxy TLS: https://${DOMAIN}"
+echo "Oneploy loopback: http://127.0.0.1:${BILLING_PORT}"
+echo "Marketing: https://${MARKETING_HOST}"
+echo "Client portal: https://${CLIENT_HOST}"
+echo "Billing portal: https://${BILLING_HOST}"
 echo "Coolify UI: http://THIS_VPS:8000  (optional host ${COOLIFY_DOMAIN:-deploy.YOURDOMAIN})"
 echo
-echo "Point DNS A/AAAA for ${DOMAIN} here, then create a Coolify API token and:"
+echo "Point DNS A/AAAA for ${MARKETING_HOST}, ${CLIENT_HOST} and ${BILLING_HOST} here, then:"
 echo "  cd ${APP_DIR}"
-echo "  ${PHP_BIN} artisan webkahost:saas --connect --url=https://${COOLIFY_DOMAIN:-127.0.0.1:8000} --token=YOUR_TOKEN --catalog --brand"
+echo "  ${PHP_BIN} artisan oneploy:saas --connect --url=https://${COOLIFY_DOMAIN:-127.0.0.1:8000} --token=YOUR_TOKEN --catalog --brand"
 echo "Database password is in ${APP_DIR}/.env (DB_PASSWORD)."
 echo "Customer apps keep using Coolify's proxy on 80/443 (Let's Encrypt)."

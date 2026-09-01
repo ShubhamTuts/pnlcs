@@ -1,0 +1,26 @@
+<svg width="1200" height="800" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="800" fill="#ffffff"/>
+  <rect width="1200" height="36" fill="#f1f5f9"/>
+  <rect y="36" width="1200" height="64" fill="#ffffff" stroke="#e5e7eb"/>
+  <text x="40" y="78" fill="#0f172a" font-family="Inter,sans-serif" font-size="22" font-weight="800">Oneploy<span fill="#22c55e">.dev</span></text>
+  <rect x="1000" y="52" width="140" height="36" rx="8" fill="#22c55e"/>
+  <text x="1024" y="75" fill="#ffffff" font-family="Inter,sans-serif" font-size="13" font-weight="700">Get Started</text>
+  <text x="80" y="200" fill="#0f172a" font-family="Inter,sans-serif" font-size="40" font-weight="900">Crush Limits with Next-Level</text>
+  <text x="80" y="250" fill="#16a34a" font-family="Inter,sans-serif" font-size="40" font-weight="900">Cloud Hosting.</text>
+  <rect x="80" y="290" width="420" height="52" rx="12" fill="#f8fafc" stroke="#e5e7eb"/>
+  <rect x="410" y="296" width="84" height="40" rx="8" fill="#0f172a"/>
+  <rect x="80" y="380" width="240" height="140" rx="16" fill="#f8fafc"/>
+  <text x="104" y="450" fill="#0f172a" font-family="Inter,sans-serif" font-size="16" font-weight="700">Git / Cloud</text>
+  <rect x="340" y="380" width="240" height="140" rx="16" fill="#f8fafc"/>
+  <text x="364" y="450" fill="#0f172a" font-family="Inter,sans-serif" font-size="16" font-weight="700">WordPress</text>
+  <rect x="600" y="380" width="240" height="140" rx="16" fill="#f8fafc"/>
+  <text x="624" y="450" fill="#0f172a" font-family="Inter,sans-serif" font-size="16" font-weight="700">Databases</text>
+  <rect x="860" y="380" width="240" height="140" rx="16" fill="#f8fafc"/>
+  <text x="884" y="450" fill="#0f172a" font-family="Inter,sans-serif" font-size="16" font-weight="700">One-click</text>
+  <rect x="200" y="560" width="240" height="160" rx="16" fill="#ffffff" stroke="#e5e7eb"/>
+  <rect x="480" y="548" width="240" height="184" rx="16" fill="#16a34a"/>
+  <rect x="760" y="560" width="240" height="160" rx="16" fill="#ffffff" stroke="#e5e7eb"/>
+  <text x="520" y="640" fill="#ffffff" font-family="Inter,sans-serif" font-size="18" font-weight="800">Business Plus</text>
+  <rect y="744" width="1200" height="56" fill="#0f172a"/>
+  <text x="40" y="778" fill="#94a3b8" font-family="Inter,sans-serif" font-size="13">© 2026 Oneploy.dev  client.oneploy.dev · billing.oneploy.dev</text>
+</svg>

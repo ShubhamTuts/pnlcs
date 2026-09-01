@@ -95,7 +95,7 @@
 
     @php $cfg = is_string($product->config_options) ? (json_decode($product->config_options, true) ?: []) : ($product->config_options ?? []); @endphp
     <div class="card" style="margin-bottom:15px;" id="coolify-product-config">
-        <div class="card-header"><strong>Coolify / Webkahost PaaS</strong> <span style="font-size:11px;color:#888;">&mdash; Git source for Node.js, Next.js and static deploys</span></div>
+        <div class="card-header"><strong>Coolify / Oneploy PaaS</strong> <span style="font-size:11px;color:#888;">&mdash; Git source for Node.js, Next.js and static deploys</span></div>
         <div class="card-body">
             <p style="font-size:12px;color:#666;margin:0 0 12px;">Package picks WordPress, Node/Next/static Git, managed databases (PostgreSQL, MySQL, Redis, …) or one-click tools (n8n, Ghost, MinIO). Git kinds need a public HTTPS repository. Databases do not. SSL is requested when the customer attaches a hostname.</p>
             <div style="display:grid;grid-template-columns:1fr 160px 120px;gap:12px;">

@@ -1,0 +1,32 @@
+# Copied onto a Coolify host at /data/coolify/proxy/dynamic/oneploy.yaml
+# so Coolify's Traefik (ports 80/443) terminates Let's Encrypt for
+# oneploy.dev, client.oneploy.dev and billing.oneploy.dev and forwards
+# to PNLCS on the docker-bridge IP port 8088.
+http:
+  routers:
+    oneploy-marketing:
+      entryPoints:
+        - https
+      rule: Host(`MARKETING_DOMAIN`)
+      service: oneploy-app
+      tls:
+        certResolver: letsencrypt
+    oneploy-client:
+      entryPoints:
+        - https
+      rule: Host(`CLIENT_DOMAIN`)
+      service: oneploy-app
+      tls:
+        certResolver: letsencrypt
+    oneploy-billing:
+      entryPoints:
+        - https
+      rule: Host(`BILLING_DOMAIN`)
+      service: oneploy-app
+      tls:
+        certResolver: letsencrypt
+  services:
+    oneploy-app:
+      loadBalancer:
+        servers:
+          - url: http://DOCKER_HOST_IP:8088

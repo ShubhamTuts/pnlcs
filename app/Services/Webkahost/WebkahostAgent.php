@@ -89,6 +89,21 @@ class WebkahostAgent
             return [['name' => 'get_ai_usage', 'arguments' => []]];
         }
 
+        if (preg_match('/\bre-?deploy\b|\brestart (the )?(app|site|service)/', $text)) {
+            return [['name' => 'redeploy', 'arguments' => []]];
+        }
+
+        if (preg_match('/\b(set|update)\b.+\b(env|environment|variable)\b/', $text) || preg_match('/\bset\s+[A-Z][A-Z0-9_]+\s*=/', $message)) {
+            $key = null;
+            $value = null;
+            if (preg_match('/\b([A-Z][A-Z0-9_]{1,})\s*=\s*(\S+)/', $message, $m)) {
+                $key = $m[1];
+                $value = rtrim($m[2], '.,;');
+            }
+
+            return [['name' => 'set_env', 'arguments' => array_filter(['key' => $key, 'value' => $value])]];
+        }
+
         if (preg_match('/\b(list|show|my)\b.+\b(app|service|site|deploy)/', $text) || preg_match('/\b(what.*(running|hosted|live))\b/', $text)) {
             return [['name' => 'list_services', 'arguments' => []]];
         }
@@ -150,6 +165,8 @@ class WebkahostAgent
             'deploy_database' => $this->deployOnCoolify($client, (string) ($arguments['engine'] ?? 'postgresql'), $arguments),
             'deploy_oneclick' => $this->deployOnCoolify($client, (string) ($arguments['kind'] ?? 'n8n'), $arguments),
             'attach_domain' => $this->attachDomain($client, $arguments),
+            'redeploy' => $this->redeploy($client),
+            'set_env' => $this->setEnv($client, $arguments),
             'get_ai_usage' => $this->aiUsage($client),
             default => ['ok' => false, 'summary' => "Unknown tool {$name}."],
         };
@@ -208,7 +225,7 @@ class WebkahostAgent
         if (! $service) {
             return [
                 'ok' => false,
-                'summary' => 'No Coolify (Webkahost PaaS) plan is attached to this account. Order a WordPress or Node.js plan first, then ask me again.',
+                'summary' => 'No Coolify (Oneploy PaaS) plan is attached to this account. Order a WordPress or Node.js plan first, then ask me again.',
             ];
         }
 
@@ -295,6 +312,55 @@ class WebkahostAgent
         return ['ok' => $ok, 'summary' => (string) ($result['message'] ?? 'Domain update failed.'), 'result' => $result];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    private function redeploy(Client $client): array
+    {
+        $service = $this->coolifyService($client);
+        if (! $service) {
+            return ['ok' => false, 'summary' => 'No Coolify app on this account to redeploy.'];
+        }
+
+        $module = app(ModuleRegistry::class)->getServerModule('coolify');
+        if (! $module instanceof CoolifyModule) {
+            return ['ok' => false, 'summary' => 'Coolify is not registered on this installation.'];
+        }
+
+        $result = $module->redeploy($service);
+        $ok = (bool) ($result['success'] ?? false);
+
+        return ['ok' => $ok, 'summary' => (string) ($result['message'] ?? 'Redeploy failed.'), 'result' => $result];
+    }
+
+    /**
+     * @param  array<string, mixed>  $arguments
+     * @return array<string, mixed>
+     */
+    private function setEnv(Client $client, array $arguments): array
+    {
+        $key = trim((string) ($arguments['key'] ?? ''));
+        $value = (string) ($arguments['value'] ?? '');
+        if ($key === '') {
+            return ['ok' => false, 'summary' => 'Tell me the variable as NAME=value, for example set DATABASE_URL=postgres://…'];
+        }
+
+        $service = $this->coolifyService($client);
+        if (! $service) {
+            return ['ok' => false, 'summary' => 'No Coolify app on this account to set environment variables on.'];
+        }
+
+        $module = app(ModuleRegistry::class)->getServerModule('coolify');
+        if (! $module instanceof CoolifyModule) {
+            return ['ok' => false, 'summary' => 'Coolify is not registered on this installation.'];
+        }
+
+        $result = $module->setEnvironmentVariable($service, $key, $value);
+        $ok = (bool) ($result['success'] ?? false);
+
+        return ['ok' => $ok, 'summary' => (string) ($result['message'] ?? 'Env update failed.'), 'result' => $result];
+    }
+
     private function coolifyService(Client $client, ?string $kind = null): ?Service
     {
         $rows = Service::where('client_id', $client->id)
@@ -354,12 +420,14 @@ class WebkahostAgent
 
     private function helpText(): string
     {
-        return "I am the Webkahost Agent. I can:\n"
+        return "I am the Oneploy Agent. I can:\n"
             ."- Deploy WordPress on your PaaS plan (\"deploy wordpress on blog.example.com\")\n"
             ."- Deploy a Node.js / Next.js app from Git (\"deploy https://github.com/me/app\")\n"
             ."- Provision PostgreSQL / MySQL / Redis (\"deploy postgres\")\n"
             ."- One-click n8n / Ghost / MinIO (\"deploy n8n\")\n"
             ."- Attach a domain and request TLS (\"ssl on app.example.com\")\n"
+            ."- Redeploy a live app (\"redeploy my site\")\n"
+            ."- Set environment variables (\"set DATABASE_URL=postgres://…\")\n"
             ."- List your running apps and check AI credits\n\n"
             .'BYOK keys live under AI Credits — your own OpenAI/Groq key is unlimited. Gateway keys still start with wk_live_.';
     }

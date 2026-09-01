@@ -1,6 +1,6 @@
-# Connect Coolify (Webkahost PaaS)
+# Connect Coolify (Oneploy PaaS)
 
-Coolify is the Git / Docker / database half of Webkahost. PNLCS bills the
+Coolify is the Git / Docker / database half of Oneploy.dev. PNLCS bills the
 customer; Coolify builds, stores and terminates the resource. See the
 [full architecture](../architecture/webkahost.md).
 
@@ -9,31 +9,34 @@ customer; Coolify builds, stores and terminates the resource. See the
 On a fresh Ubuntu 22.04/24.04 VPS (root):
 
 ```bash
-export WEBKAHOST_DOMAIN=billing.example.com
-export WEBKAHOST_COOLIFY_DOMAIN=deploy.example.com
+export ONEPLOY_DOMAIN=oneploy.dev
+export ONEPLOY_COOLIFY_DOMAIN=deploy.oneploy.dev
 curl -fsSL https://raw.githubusercontent.com/ShubhamTuts/pnlcs/main/scripts/install-webkahost-saas.sh | bash
 ```
 
-The script installs Docker, Coolify (which **owns public 80/443** for
-customer apps and Let's Encrypt), PHP 8.4, MariaDB, a loopback Caddy on
-`127.0.0.1:8088` for PNLCS, this repository, then:
+That publishes **oneploy.dev**, **client.oneploy.dev** and **billing.oneploy.dev**
+through Coolify's Traefik (`deploy/coolify-proxy/oneploy.yaml`).
 
 ```bash
-php artisan webkahost:brand
+php artisan oneploy:brand
 php artisan webkahost:saas --catalog
 php artisan optimize
 ```
 
-It also writes `deploy/coolify-proxy/webkahost-billing.yaml` into Coolify's
-proxy so `WEBKAHOST_DOMAIN` gets a certificate and forwards to billing.
+`WEBKAHOST_DOMAIN` still installs a single hostname for older playbooks.
+
+The script installs Docker, Coolify (which **owns public 80/443** for
+customer apps and Let's Encrypt), PHP 8.4, MariaDB, a loopback Caddy on
+`127.0.0.1:8088` for PNLCS, this repository, then brands and seeds.
+
 A cron entry runs `artisan schedule:run` every minute (invoices, suspend,
 SSL polls, queues).
 
 After Coolify is up, create an API token and:
 
 ```bash
-php artisan webkahost:saas --connect \
-  --url=https://deploy.example.com \
+php artisan oneploy:saas --connect \
+  --url=https://deploy.oneploy.dev \
   --token=YOUR_COOLIFY_TOKEN \
   --server-uuid=OPTIONAL_DESTINATION_UUID
 ```
@@ -42,7 +45,7 @@ php artisan webkahost:saas --connect \
 
 ## Add the server by hand
 
-**Configuration → Servers → Add Server**, type **Coolify (Webkahost PaaS)**.
+**Configuration → Servers → Add Server**, type **Coolify (Oneploy PaaS)**.
 
 | Field | What to paste |
 |---|---|

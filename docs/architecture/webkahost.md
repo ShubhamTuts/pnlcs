@@ -1,4 +1,32 @@
+# Oneploy.dev — production brand
+
+The public product is **Oneploy.dev**. PNLCS is still the billing platform;
+Coolify is still the PaaS. White-label the install and split hosts:
+
+| Host | Job |
+|---|---|
+| `oneploy.dev` | Marketing / landing (`php artisan oneploy:brand`) |
+| `client.oneploy.dev` | Client portal — services, domains, Coolify, Oneploy Agent |
+| `billing.oneploy.dev` | Invoices, AI credit packs, Razorpay / Stripe / PayPal |
+
+```bash
+export ONEPLOY_DOMAIN=oneploy.dev
+sudo bash scripts/install-webkahost-saas.sh
+php artisan oneploy:saas --connect --url=https://deploy.oneploy.dev --token=… --catalog --brand
+```
+
+Env: `ONEPLOY_MARKETING_HOST`, `ONEPLOY_CLIENT_HOST`, `ONEPLOY_BILLING_HOST`,
+`SESSION_DOMAIN=.oneploy.dev`. Leave them empty for a single-host install.
+
+The Oneploy Agent is fenced to this customer and talks to Coolify: WordPress,
+Git, databases, one-click apps, domain+TLS, **redeploy**, **set env**.
+
+`webkahost:brand` still exists for older installs and tests.
+
+---
+
 # Webkahost — end-to-end architecture
+
 
 Webkahost is a **Vercel-shaped hosting company** built by composing two
 open-source products you already have, plus a thin AI plane branded as
@@ -176,6 +204,8 @@ client:
 | `deploy_database` | PostgreSQL / MySQL / Redis / … on their DB plan |
 | `deploy_oneclick` | n8n / Ghost / MinIO / Umami / … |
 | `attach_domain` | Hostname + Let's Encrypt |
+| `redeploy` | Restart / rebuild the live Coolify resource |
+| `set_env` | Set `NAME=value` on the application |
 | `get_ai_usage` | Credit balance |
 
 It does **not** get a shell on the host, other customers’ data, or payment
@@ -185,7 +215,8 @@ without handing the model the keys to the building.
 ## Branding
 
 ```bash
-php artisan webkahost:brand
+php artisan oneploy:brand
+# or: php artisan webkahost:brand
 ```
 
 Sets the white-label company name to **Webkahost**, removes PNLCS/Panelica

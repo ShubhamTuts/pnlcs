@@ -40,7 +40,7 @@ class AiGatewayService
         $byok = AiByokCredential::activeFor($client);
         $reserve = $this->credits->costFor($model, $inputTokens, 256);
         if (! $byok && $this->credits->balance($client) < $reserve) {
-            return ['status' => 402, 'body' => ['error' => ['message' => 'Insufficient AI credits. Buy a pack or add a BYOK key in the Webkahost portal.', 'type' => 'insufficient_credits']]];
+            return ['status' => 402, 'body' => ['error' => ['message' => 'Insufficient AI credits. Buy a pack or add a BYOK key in the Oneploy portal.', 'type' => 'insufficient_credits']]];
         }
 
         $started = microtime(true);
@@ -175,8 +175,8 @@ class AiGatewayService
         }
 
         $text = $last === ''
-            ? 'Webkahost Agent is ready. Tell me what to deploy.'
-            : "I received: {$last}\n\nConnect an upstream model in Settings to generate real completions. The Webkahost Agent can still run deploy tools from this message.";
+            ? 'Oneploy Agent is ready. Tell me what to deploy.'
+            : "I received: {$last}\n\nConnect an upstream model in Settings to generate real completions. The Oneploy Agent can still run deploy tools from this message.";
 
         $id = 'chatcmpl-'.Str::lower(Str::random(24));
 

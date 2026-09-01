@@ -76,7 +76,7 @@
                             <option value="cpanel">cPanel/WHM</option>
                             <option value="plesk">Plesk</option>
                             <option value="directadmin">DirectAdmin</option>
-                            <option value="coolify">Coolify (Webkahost PaaS)</option>
+                            <option value="coolify">Coolify (Oneploy PaaS)</option>
                             <option value="hestiacp">HestiaCP</option>
                             <option value="proxmox">Proxmox</option>
                             <option value="vultr">Vultr</option>
@@ -132,7 +132,7 @@
                             <option value="cpanel">cPanel/WHM</option>
                             <option value="plesk">Plesk</option>
                             <option value="directadmin">DirectAdmin</option>
-                            <option value="coolify">Coolify (Webkahost PaaS)</option>
+                            <option value="coolify">Coolify (Oneploy PaaS)</option>
                             <option value="hestiacp">HestiaCP</option>
                             <option value="proxmox">Proxmox</option>
                             <option value="vultr">Vultr</option>

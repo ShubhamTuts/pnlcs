@@ -128,6 +128,59 @@ it('deploys wordpress through coolify when the customer has a plan', function ()
         ->and($service->fresh()->module_data['coolify_uuid'] ?? null)->toBe('svc-a');
 });
 
+it('maps a redeploy sentence onto the redeploy tool', function () {
+    $plan = app(WebkahostAgent::class)->plan('please redeploy my site');
+
+    expect($plan[0]['name'])->toBe('redeploy');
+});
+
+it('maps a set-env sentence onto the set_env tool', function () {
+    $plan = app(WebkahostAgent::class)->plan('set DATABASE_URL=postgres://db/app');
+
+    expect($plan[0]['name'])->toBe('set_env')
+        ->and($plan[0]['arguments']['key'] ?? null)->toBe('DATABASE_URL')
+        ->and($plan[0]['arguments']['value'] ?? null)->toBe('postgres://db/app');
+});
+
+it('redeploys through coolify when the customer has a live app', function () {
+    Http::fake([
+        '*/api/v1/deploy*' => Http::response(['uuid' => 'dep-1'], 200),
+        '*/api/v1/applications/*/restart' => Http::response(['ok' => true], 200),
+    ]);
+
+    $client = Client::factory()->create();
+    $server = Server::factory()->create([
+        'type' => 'coolify',
+        'hostname' => 'coolify.test',
+        'ip_address' => '203.0.113.9',
+        'port' => 8000,
+        'username' => '22222222-2222-2222-2222-222222222222',
+        'access_hash' => 'token',
+    ]);
+    $product = Product::factory()->create([
+        'group_id' => ProductGroup::factory()->create()->id,
+        'server_type' => 'coolify',
+        'config_options' => ['package_name' => 'nodejs'],
+    ]);
+    $service = Service::factory()->create([
+        'client_id' => $client->id,
+        'product_id' => $product->id,
+        'server_id' => $server->id,
+        'order_id' => Order::factory()->create(['client_id' => $client->id])->id,
+        'domain' => 'app.example.com',
+        'status' => 'active',
+        'module_data' => [
+            'coolify_uuid' => 'app-a',
+            'coolify_resource' => 'application',
+        ],
+    ]);
+
+    $result = app(WebkahostAgent::class)->runTool($client, 'redeploy', []);
+
+    expect($result['ok'])->toBeTrue()
+        ->and($service->fresh()->module_data['coolify_uuid'] ?? null)->toBe('app-a');
+});
+
 it('answers an agent chat from the portal', function () {
     [$user, $client] = agentUser();
     app(AiCreditService::class)->credit($client, 50, 'grant', 'agent tests');
@@ -135,7 +188,7 @@ it('answers an agent chat from the portal', function () {
     $this->actingAs($user)
         ->get(route('client.ai.agent'))
         ->assertOk()
-        ->assertSee('Webkahost Agent', false);
+        ->assertSee('Oneploy Agent', false);
 
     $this->actingAs($user)
         ->post(route('client.ai.agent.message'), ['message' => 'what is my credit balance?'])

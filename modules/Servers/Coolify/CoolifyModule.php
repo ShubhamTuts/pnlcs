@@ -469,7 +469,7 @@ class CoolifyModule extends AbstractServerModule
     {
         $payload = [
             'name' => $this->resourceName($service),
-            'description' => 'Webkahost managed '.$kind,
+            'description' => 'Oneploy managed '.$kind,
             'project_uuid' => $projectUuid,
             'server_uuid' => $destination,
             'environment_name' => 'production',
@@ -493,7 +493,7 @@ class CoolifyModule extends AbstractServerModule
         $payload = [
             'type' => $kind,
             'name' => $this->resourceName($service),
-            'description' => 'Webkahost one-click '.$kind,
+            'description' => 'Oneploy one-click '.$kind,
             'project_uuid' => $projectUuid,
             'server_uuid' => $destination,
             'environment_name' => 'production',
@@ -609,7 +609,7 @@ class CoolifyModule extends AbstractServerModule
         $payload = [
             'type' => 'wordpress-with-mysql',
             'name' => $name,
-            'description' => 'Webkahost one-click WordPress',
+            'description' => 'Oneploy one-click WordPress',
             'project_uuid' => $projectUuid,
             'server_uuid' => $destination,
             'environment_name' => 'production',
@@ -719,7 +719,7 @@ class CoolifyModule extends AbstractServerModule
 
         $created = $this->api($server, 'POST', 'projects', [
             'name' => $name,
-            'description' => 'Webkahost customer '.$clientId,
+            'description' => 'Oneploy customer '.$clientId,
         ]);
 
         if (! ($created['success'] ?? false)) {

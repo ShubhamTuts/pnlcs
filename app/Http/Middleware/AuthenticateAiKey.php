@@ -19,7 +19,7 @@ class AuthenticateAiKey
 
         if ($token === '' || ! str_starts_with($token, 'wk_live_')) {
             return response()->json([
-                'error' => ['message' => 'Missing Webkahost AI key. Send Authorization: Bearer wk_live_…', 'type' => 'invalid_api_key'],
+                'error' => ['message' => 'Missing Oneploy AI key. Send Authorization: Bearer wk_live_…', 'type' => 'invalid_api_key'],
             ], 401);
         }
 
@@ -29,7 +29,7 @@ class AuthenticateAiKey
 
         if (! $key || ! $key->client) {
             return response()->json([
-                'error' => ['message' => 'Invalid Webkahost AI key', 'type' => 'invalid_api_key'],
+                'error' => ['message' => 'Invalid Oneploy AI key', 'type' => 'invalid_api_key'],
             ], 401);
         }
 

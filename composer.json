@@ -38,7 +38,8 @@
         },
         "files": [
             "app/Support/hooks.php",
-            "app/Support/formatting.php"
+            "app/Support/formatting.php",
+            "app/Support/oneploy.php"
         ]
     },
     "autoload-dev": {
